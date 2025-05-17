@@ -32,6 +32,7 @@ export default function SQLPanel() {
 
   const fetchDatabases = async () => {
     try {
+      setLoading(true)
       const response = await fetch('/api/list-databases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,17 +41,25 @@ export default function SQLPanel() {
       const data = await response.json()
       if (data.success) {
         setDatabases(data.databases)
+        // Clear any previous error messages if successful
+        if (result?.error?.includes('Failed to fetch databases')) {
+          setResult(null)
+        }
       } else {
         setResult({
           success: false,
-          error: data.error || 'Failed to fetch databases'
+          error: data.error || 'Failed to fetch databases. Please check your connection and try again.'
         })
+        setIsConnected(false)
       }
     } catch (error) {
       setResult({
         success: false,
-        error: 'Failed to fetch databases'
+        error: 'Failed to fetch databases. Please check your connection and try again.'
       })
+      setIsConnected(false)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -254,6 +263,8 @@ export default function SQLPanel() {
                         if (data.success) {
                           setIsConnected(true)
                           await fetchDatabases()
+                        } else {
+                          setIsConnected(false)
                         }
                       } catch (error) {
                         setResult({
