@@ -21,32 +21,79 @@ export default function SQLPanel() {
     port: '',
     user: '',
     password: '',
+    database: ''
   })
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<QueryResult | null>(null)
+  const [databases, setDatabases] = useState<string[]>([])
+  const [isConnected, setIsConnected] = useState(false)
+  const [abortController, setAbortController] = useState<AbortController | null>(null)
+
+  const fetchDatabases = async () => {
+    try {
+      const response = await fetch('/api/list-databases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      })
+      const data = await response.json()
+      if (data.success) {
+        setDatabases(data.databases)
+      } else {
+        setResult({
+          success: false,
+          error: data.error || 'Failed to fetch databases'
+        })
+      }
+    } catch (error) {
+      setResult({
+        success: false,
+        error: 'Failed to fetch databases'
+      })
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setResult(null)
 
+    // Create new AbortController for this request
+    const controller = new AbortController()
+    setAbortController(controller)
+
     try {
       const response = await fetch('/api/execute-sql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...credentials, query }),
+        signal: controller.signal
       })
 
       const data = await response.json()
       setResult(data)
     } catch (error) {
-      setResult({
-        success: false,
-        error: 'Failed to execute query. Please try again.',
-      })
+      if (error instanceof Error && error.name === 'AbortError') {
+        setResult({
+          success: false,
+          error: 'Query cancelled by user.',
+        })
+      } else {
+        setResult({
+          success: false,
+          error: 'Failed to execute query. Please try again.',
+        })
+      }
     } finally {
       setLoading(false)
+      setAbortController(null)
+    }
+  }
+
+  const handleCancelQuery = () => {
+    if (abortController) {
+      abortController.abort()
     }
   }
 
@@ -125,6 +172,35 @@ export default function SQLPanel() {
             </CardContent>
           </Card>
 
+          {isConnected && databases.length > 0 && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle>Select Database</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="database">Database</Label>
+                  <select
+                    id="database"
+                    className="w-full p-2 border rounded-md bg-background"
+                    value={credentials.database}
+                    onChange={(e) =>
+                      setCredentials({ ...credentials, database: e.target.value })
+                    }
+                    required
+                  >
+                    <option value="">Select a database</option>
+                    {databases.map((db) => (
+                      <option key={db} value={db}>
+                        {db}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>SQL Query</CardTitle>
@@ -139,16 +215,26 @@ export default function SQLPanel() {
                   required
                 />
                 <div className="flex space-x-4">
-                  <Button type="submit" className="flex-1" disabled={loading}>
-                    {loading ? (
-                      <>
+                  {loading ? (
+                    <>
+                      <Button type="submit" className="flex-1" disabled>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Executing Query...
-                      </>
-                    ) : (
-                      'Execute Query'
-                    )}
-                  </Button>
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="destructive"
+                        className="flex-1"
+                        onClick={handleCancelQuery}
+                      >
+                        Cancel Query
+                      </Button>
+                    </>
+                  ) : (
+                    <Button type="submit" className="flex-1">
+                      Execute Query
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -156,6 +242,7 @@ export default function SQLPanel() {
                     onClick={async () => {
                       setLoading(true)
                       setResult(null)
+                      setIsConnected(false)
                       try {
                         const response = await fetch('/api/test-connection', {
                           method: 'POST',
@@ -164,6 +251,10 @@ export default function SQLPanel() {
                         })
                         const data = await response.json()
                         setResult(data)
+                        if (data.success) {
+                          setIsConnected(true)
+                          await fetchDatabases()
+                        }
                       } catch (error) {
                         setResult({
                           success: false,
