@@ -4,10 +4,10 @@ import { executeQuery } from '@/lib/db';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { host, port, user, password, query } = body;
+    const { host, port, user, password, database, query } = body;
 
     // Validate required fields
-    if (!host || !port || !user || !password || !query) {
+    if (!host || !port || !user || !password || !database || !query) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     // Execute the query
     const result = await executeQuery(
-      { host, port: Number(port), user, password },
+      { host, port: Number(port), user, password, database },
       query
     );
 

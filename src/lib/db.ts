@@ -5,6 +5,7 @@ interface ConnectionDetails {
   port: number
   user: string
   password: string
+  database?: string
 }
 
 export async function executeQuery(connectionDetails: ConnectionDetails, query: string) {
@@ -13,22 +14,27 @@ export async function executeQuery(connectionDetails: ConnectionDetails, query: 
     port: connectionDetails.port,
     user: connectionDetails.user,
     password: connectionDetails.password,
+    database: connectionDetails.database,
     options: {
       encrypt: true,
       trustServerCertificate: true,
     },
   }
 
+  let pool: sql.ConnectionPool | null = null
+  
   try {
-    await sql.connect(config)
-    const result = await sql.query(query)
-    await sql.close()
+    pool = await new sql.ConnectionPool(config).connect()
+    const result = await pool.request().query(query)
     return { success: true, data: result.recordset || result.rowsAffected }
   } catch (error) {
-    await sql.close()
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'An unknown error occurred' 
+    }
+  } finally {
+    if (pool) {
+      await pool.close()
     }
   }
 }
