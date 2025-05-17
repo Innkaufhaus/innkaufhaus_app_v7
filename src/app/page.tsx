@@ -129,7 +129,7 @@ export default function SQLPanel() {
             <CardHeader>
               <CardTitle>SQL Query</CardTitle>
             </CardHeader>
-            <CardContent>
+          <CardContent>
               <div className="space-y-4">
                 <Textarea
                   placeholder="Enter your SQL query here (e.g., SELECT * FROM users)"
@@ -138,16 +138,46 @@ export default function SQLPanel() {
                   onChange={(e) => setQuery(e.target.value)}
                   required
                 />
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Executing Query...
-                    </>
-                  ) : (
-                    'Execute Query'
-                  )}
-                </Button>
+                <div className="flex space-x-4">
+                  <Button type="submit" className="flex-1" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Executing Query...
+                      </>
+                    ) : (
+                      'Execute Query'
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={async () => {
+                      setLoading(true)
+                      setResult(null)
+                      try {
+                        const response = await fetch('/api/test-connection', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(credentials),
+                        })
+                        const data = await response.json()
+                        setResult(data)
+                      } catch (error) {
+                        setResult({
+                          success: false,
+                          error: 'Failed to test connection. Please try again.',
+                        })
+                      } finally {
+                        setLoading(false)
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    Test Connection
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
