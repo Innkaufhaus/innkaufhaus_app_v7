@@ -1,29 +1,34 @@
-import mysql from 'mysql2/promise';
+import sql from 'mssql'
 
 interface ConnectionDetails {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
+  host: string
+  port: number
+  user: string
+  password: string
 }
 
 export async function executeQuery(connectionDetails: ConnectionDetails, query: string) {
-  const connection = await mysql.createConnection({
-    host: connectionDetails.host,
+  const config = {
+    server: connectionDetails.host,
     port: connectionDetails.port,
     user: connectionDetails.user,
     password: connectionDetails.password,
-  });
+    options: {
+      encrypt: true,
+      trustServerCertificate: true,
+    },
+  }
 
   try {
-    const [results] = await connection.execute(query);
-    await connection.end();
-    return { success: true, data: results };
+    await sql.connect(config)
+    const result = await sql.query(query)
+    await sql.close()
+    return { success: true, data: result.recordset || result.rowsAffected }
   } catch (error) {
-    await connection.end();
+    await sql.close()
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'An unknown error occurred' 
-    };
+    }
   }
 }

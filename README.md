@@ -1,6 +1,6 @@
 # SQL Query Explorer
 
-A modern web application that allows users to connect to MySQL databases and execute SQL queries through a clean, user-friendly interface.
+A modern web application that allows users to connect to Microsoft SQL Server databases and execute SQL queries through a clean, user-friendly interface.
 
 ## Features
 
@@ -31,33 +31,43 @@ A modern web application that allows users to connect to MySQL databases and exe
 ### Prerequisites
 
 - Node.js (v18 or higher)
-- MySQL server (accessible from the application)
+- Microsoft SQL Server (accessible from the application)
 
 ### Installation
 
 1. Clone the repository:
    ```bash
    git clone https://github.com/Innkaufhaus/sql_dummy_for_testing.git
+   ```
+
+2. Navigate to the project directory:
+   ```bash
    cd sql_dummy_for_testing
    ```
 
-2. Install dependencies:
+3. Remove the package-lock.json file:
    ```bash
-   npm install
+   rm package-lock.json
    ```
 
-3. Start the development server:
+4. Install dependencies with the following command:
+   ```bash
+   npm install --legacy-peer-deps
+   npm install mssql @types/mssql --legacy-peer-deps
+   ```
+
+5. Start the development server:
    ```bash
    npm run dev
    ```
 
-4. Open your browser and navigate to `http://localhost:8000`
+The application will be available at http://localhost:8000
 
 ## Usage
 
 1. **Connect to Database**
-   - Enter your database host (default: localhost)
-   - Specify the port (default: 3306)
+   - Enter your SQL Server host
+   - Specify the port
    - Provide username and password
 
 2. **Execute Queries**
@@ -80,13 +90,14 @@ A modern web application that allows users to connect to MySQL databases and exe
 
 - **Backend:**
   - Node.js
-  - mysql2 for database connections
+  - mssql for database connections
 
 ## Security Considerations
 
 - Database credentials are only stored in memory during the session
 - Passwords are never logged or stored
 - All database connections are properly closed after query execution
+- TLS encryption enabled by default for database connections
 
 ## Development
 
@@ -116,3 +127,30 @@ src/
 ## License
 
 This project is open source and available under the MIT License.
+
+## Troubleshooting
+
+If you encounter dependency conflicts during installation, try the following steps:
+
+1. Delete the node_modules directory:
+   ```bash
+   rm -rf node_modules
+   ```
+
+2. Remove package-lock.json:
+   ```bash
+   rm package-lock.json
+   ```
+
+3. Clear npm cache:
+   ```bash
+   npm cache clean --force
+   ```
+
+4. Install dependencies with legacy peer deps:
+   ```bash
+   npm install --legacy-peer-deps
+   npm install mssql @types/mssql --legacy-peer-deps
+   ```
+
+This should resolve any dependency conflicts and allow you to run the application successfully.
