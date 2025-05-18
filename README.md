@@ -19,6 +19,8 @@ A modern web interface for executing SQL queries, saving results as CSV, and run
 
 ## Quick Start (Windows)
 
+### Fresh Installation
+
 1. Download `setup.ps1` from this repository
 2. Open PowerShell as Administrator
 3. Navigate to where you downloaded `setup.ps1`
@@ -28,9 +30,24 @@ A modern web interface for executing SQL queries, saving results as CSV, and run
    .\setup.ps1
    ```
 
+### Updating Existing Installation
+
+The setup script will automatically detect if you have an existing installation and handle the update process:
+
+1. If you have local changes:
+   - You'll be prompted to either reset to the main branch (losing local changes)
+   - Or cancel the setup to handle your changes first
+
+2. If you have no local changes:
+   - The script will automatically update to the latest version
+   - Clean and reinstall dependencies
+   - Start the development server
+
 ## Manual Setup
 
 If you prefer to set up manually:
+
+### Fresh Installation
 
 1. Clone the repository:
    ```powershell
@@ -48,7 +65,25 @@ If you prefer to set up manually:
    npm run dev
    ```
 
-4. Open http://localhost:8000 in your browser
+### Manual Update
+
+1. Update the repository:
+   ```powershell
+   git fetch origin main
+   git reset --hard origin/main
+   ```
+
+2. Clean install dependencies:
+   ```powershell
+   npm cache clean --force
+   rm -rf node_modules package-lock.json
+   npm install --legacy-peer-deps
+   ```
+
+3. Start the development server:
+   ```powershell
+   npm run dev
+   ```
 
 ## Usage
 
@@ -82,6 +117,7 @@ If you prefer to set up manually:
 2. If npm install fails:
    ```powershell
    npm cache clean --force
+   rm -rf node_modules package-lock.json
    npm install --legacy-peer-deps
    ```
 
@@ -90,3 +126,20 @@ If you prefer to set up manually:
    - Or change the port in package.json:
      ```json
      "dev": "cross-env PORT=8001 next dev"
+     ```
+
+4. If you have local changes you want to keep:
+   ```powershell
+   # Create a branch for your changes
+   git checkout -b my-changes
+   git add .
+   git commit -m "save my changes"
+   
+   # Update main branch
+   git checkout main
+   git fetch origin main
+   git reset --hard origin/main
+   
+   # Reapply your changes if needed
+   git checkout my-changes
+   git rebase main

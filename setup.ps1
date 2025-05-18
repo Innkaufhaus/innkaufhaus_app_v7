@@ -21,18 +21,59 @@ try {
     exit 1
 }
 
-# Create project directory
+# Project directory setup
 $projectName = "sql-query-explorer"
-Write-Host "📁 Creating project directory..." -ForegroundColor Cyan
-New-Item -ItemType Directory -Force -Path $projectName
-Set-Location $projectName
+$projectPath = Join-Path (Get-Location) $projectName
 
-# Clone the repository
-Write-Host "📥 Cloning repository..." -ForegroundColor Cyan
-git clone https://github.com/Innkaufhaus/sql_dummy_for_testing.git .
+# Check if directory exists
+if (Test-Path $projectPath) {
+    Write-Host "📂 Existing installation detected at $projectPath" -ForegroundColor Yellow
+    Set-Location $projectPath
 
-# Install dependencies
+    # Check if it's a git repository
+    if (Test-Path ".git") {
+        Write-Host "🔄 Updating existing repository..." -ForegroundColor Cyan
+        
+        # Fetch latest changes
+        git fetch origin main
+        
+        # Check for local changes
+        $status = git status --porcelain
+        if ($status) {
+            Write-Host "⚠️ Local changes detected. Do you want to reset to main branch? (y/n)" -ForegroundColor Yellow
+            $response = Read-Host
+            if ($response -eq 'y') {
+                git reset --hard origin/main
+                Write-Host "✅ Successfully reset to main branch" -ForegroundColor Green
+            } else {
+                Write-Host "❌ Setup cancelled. Please commit or stash your changes and try again" -ForegroundColor Red
+                exit 1
+            }
+        } else {
+            git reset --hard origin/main
+            Write-Host "✅ Successfully updated to latest version" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "❌ Directory exists but is not a git repository. Please remove or rename the directory" -ForegroundColor Red
+        exit 1
+    }
+} else {
+    Write-Host "📁 Creating new project directory..." -ForegroundColor Cyan
+    New-Item -ItemType Directory -Force -Path $projectName
+    Set-Location $projectName
+
+    # Clone the repository
+    Write-Host "📥 Cloning repository..." -ForegroundColor Cyan
+    git clone https://github.com/Innkaufhaus/sql_dummy_for_testing.git .
+}
+
+# Clean install dependencies
+Write-Host "🧹 Cleaning npm cache..." -ForegroundColor Cyan
+npm cache clean --force
+
 Write-Host "📦 Installing dependencies..." -ForegroundColor Cyan
+Remove-Item -Path "node_modules" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "package-lock.json" -Force -ErrorAction SilentlyContinue
 npm install --legacy-peer-deps
 
 # Create public directory if it doesn't exist
