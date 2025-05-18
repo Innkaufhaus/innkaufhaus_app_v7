@@ -17,73 +17,80 @@ A modern web interface for executing SQL queries, saving results as CSV, and run
 - Git
 - Windows PowerShell 5.1 or later
 
-## Quick Start (Windows)
+## Installation Options
 
-### Fresh Installation
+### 1. Fresh Installation in a New Directory
 
-1. Download `setup.ps1` from this repository
-2. Open PowerShell as Administrator
-3. Navigate to where you downloaded `setup.ps1`
-4. Run:
-   ```powershell
-   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   .\setup.ps1
-   ```
+```powershell
+# Create a new directory for the project
+mkdir my-new-project
+cd my-new-project
 
-### Updating Existing Installation
+# Download setup.ps1 from the repository
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Innkaufhaus/sql_dummy_for_testing/main/setup.ps1" -OutFile "setup.ps1"
 
-The setup script will automatically detect if you have an existing installation and handle the update process:
+# Allow script execution for this session
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
-1. If you have local changes:
-   - You'll be prompted to either reset to the main branch (losing local changes)
-   - Or cancel the setup to handle your changes first
+# Run the setup script
+.\setup.ps1
+```
 
-2. If you have no local changes:
-   - The script will automatically update to the latest version
-   - Clean and reinstall dependencies
-   - Start the development server
+### 2. Clean Installation (Remove Existing and Start Fresh)
+
+```powershell
+# Download setup.ps1 (if you don't have it)
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Innkaufhaus/sql_dummy_for_testing/main/setup.ps1" -OutFile "setup.ps1"
+
+# Run setup with --clean parameter to remove existing installation
+.\setup.ps1 --clean
+```
+
+### 3. Update Existing Installation
+
+```powershell
+# If you're already in the project directory
+.\setup.ps1
+
+# Or from another directory
+cd path\to\sql-query-explorer
+.\setup.ps1
+```
+
+## Offline Installation
+
+The setup script will automatically detect if you're offline:
+
+1. For new installations:
+   - Internet connection is required for first-time setup
+   - Script will notify you if connection is not available
+
+2. For existing installations:
+   - Will use existing files if no internet connection
+   - Dependencies will install from npm cache
+   - Updates will be skipped until connection is restored
 
 ## Manual Setup
 
 If you prefer to set up manually:
 
-### Fresh Installation
+```powershell
+# Clone the repository
+git clone https://github.com/Innkaufhaus/sql_dummy_for_testing.git my-project
+cd my-project
 
-1. Clone the repository:
-   ```powershell
-   git clone https://github.com/Innkaufhaus/sql_dummy_for_testing.git
-   cd sql_dummy_for_testing
-   ```
+# Clean install dependencies
+npm cache clean --force
+Remove-Item -Path node_modules -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path package-lock.json -Force -ErrorAction SilentlyContinue
+npm install --legacy-peer-deps
 
-2. Install dependencies:
-   ```powershell
-   npm install --legacy-peer-deps
-   ```
+# Create public directory
+New-Item -ItemType Directory -Force -Path public
 
-3. Start the development server:
-   ```powershell
-   npm run dev
-   ```
-
-### Manual Update
-
-1. Update the repository:
-   ```powershell
-   git fetch origin main
-   git reset --hard origin/main
-   ```
-
-2. Clean install dependencies:
-   ```powershell
-   npm cache clean --force
-   rm -rf node_modules package-lock.json
-   npm install --legacy-peer-deps
-   ```
-
-3. Start the development server:
-   ```powershell
-   npm run dev
-   ```
+# Start the development server
+npm run dev
+```
 
 ## Usage
 
@@ -109,7 +116,7 @@ If you prefer to set up manually:
 
 ## Troubleshooting
 
-1. If you get permission errors running setup.ps1:
+1. If you get permission errors:
    ```powershell
    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
    ```
@@ -117,8 +124,8 @@ If you prefer to set up manually:
 2. If npm install fails:
    ```powershell
    npm cache clean --force
-   rm -rf node_modules package-lock.json
-   npm install --legacy-peer-deps
+   Remove-Item -Path node_modules -Recurse -Force -ErrorAction SilentlyContinue
+   npm install --legacy-peer-deps --prefer-offline
    ```
 
 3. If the port is in use:
@@ -128,18 +135,13 @@ If you prefer to set up manually:
      "dev": "cross-env PORT=8001 next dev"
      ```
 
-4. If you have local changes you want to keep:
+4. If you have a corrupted installation:
    ```powershell
-   # Create a branch for your changes
-   git checkout -b my-changes
-   git add .
-   git commit -m "save my changes"
-   
-   # Update main branch
-   git checkout main
-   git fetch origin main
-   git reset --hard origin/main
-   
-   # Reapply your changes if needed
-   git checkout my-changes
-   git rebase main
+   # Use the --clean parameter to start fresh
+   .\setup.ps1 --clean
+   ```
+
+5. Network Issues:
+   - The setup script includes retry logic for network operations
+   - If problems persist, try running npm commands with `--prefer-offline`
+   - Check your proxy settings if behind a corporate network
