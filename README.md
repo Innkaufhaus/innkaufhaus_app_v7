@@ -17,58 +17,50 @@ A modern web interface for executing SQL queries, saving results as CSV, and run
 - Git
 - Windows PowerShell 5.1 or later
 
-## Installation Options
+## Quick Start (Important: TLS Setup)
 
-### 1. Fresh Installation in a New Directory
+Before starting, enable TLS 1.2 in PowerShell to allow secure downloads:
 
 ```powershell
-# Create a new directory for the project
+# Open PowerShell and run:
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+```
+
+Then choose one of these installation methods:
+
+### 1. Fresh Installation
+
+```powershell
+# Create and navigate to a new directory
 mkdir my-new-project
 cd my-new-project
 
-# Download setup.ps1 from the repository
+# Download setup script
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Innkaufhaus/sql_dummy_for_testing/main/setup.ps1" -OutFile "setup.ps1"
 
-# Allow script execution for this session
+# Allow script execution and run setup
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-
-# Run the setup script
 .\setup.ps1
 ```
 
-### 2. Clean Installation (Remove Existing and Start Fresh)
+### 2. Clean Installation (Remove Existing)
 
 ```powershell
-# Download setup.ps1 (if you don't have it)
+# Download and run with --clean parameter
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Innkaufhaus/sql_dummy_for_testing/main/setup.ps1" -OutFile "setup.ps1"
-
-# Run setup with --clean parameter to remove existing installation
 .\setup.ps1 --clean
 ```
 
 ### 3. Update Existing Installation
 
 ```powershell
-# If you're already in the project directory
+# If you're in the project directory:
 .\setup.ps1
 
-# Or from another directory
+# Or from another location:
 cd path\to\sql-query-explorer
 .\setup.ps1
 ```
-
-## Offline Installation
-
-The setup script will automatically detect if you're offline:
-
-1. For new installations:
-   - Internet connection is required for first-time setup
-   - Script will notify you if connection is not available
-
-2. For existing installations:
-   - Will use existing files if no internet connection
-   - Dependencies will install from npm cache
-   - Updates will be skipped until connection is restored
 
 ## Manual Setup
 
@@ -79,16 +71,14 @@ If you prefer to set up manually:
 git clone https://github.com/Innkaufhaus/sql_dummy_for_testing.git my-project
 cd my-project
 
-# Clean install dependencies
+# Install dependencies
 npm cache clean --force
-Remove-Item -Path node_modules -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -Path package-lock.json -Force -ErrorAction SilentlyContinue
 npm install --legacy-peer-deps
 
 # Create public directory
 New-Item -ItemType Directory -Force -Path public
 
-# Start the development server
+# Start the server
 npm run dev
 ```
 
@@ -116,32 +106,36 @@ npm run dev
 
 ## Troubleshooting
 
-1. If you get permission errors:
+1. SSL/TLS Download Issues:
+   ```powershell
+   # Must run this first in PowerShell
+   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+   ```
+
+2. Permission Errors:
    ```powershell
    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
    ```
 
-2. If npm install fails:
+3. Installation Issues:
    ```powershell
+   # Clean install
+   .\setup.ps1 --clean
+   
+   # Or manual cleanup:
    npm cache clean --force
-   Remove-Item -Path node_modules -Recurse -Force -ErrorAction SilentlyContinue
+   Remove-Item -Path node_modules -Recurse -Force
    npm install --legacy-peer-deps --prefer-offline
    ```
 
-3. If the port is in use:
-   - Close any other running Node.js applications
-   - Or change the port in package.json:
-     ```json
-     "dev": "cross-env PORT=8001 next dev"
-     ```
-
-4. If you have a corrupted installation:
-   ```powershell
-   # Use the --clean parameter to start fresh
-   .\setup.ps1 --clean
+4. Port in Use:
+   ```json
+   // In package.json, change port:
+   "dev": "cross-env PORT=8001 next dev"
    ```
 
-5. Network Issues:
-   - The setup script includes retry logic for network operations
-   - If problems persist, try running npm commands with `--prefer-offline`
-   - Check your proxy settings if behind a corporate network
+5. Network/Proxy Issues:
+   - Script includes retry logic for network operations
+   - Use `--prefer-offline` with npm commands
+   - Check corporate proxy settings
+   - Ensure TLS 1.2 is enabled
