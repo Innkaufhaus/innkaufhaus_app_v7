@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
@@ -14,6 +14,19 @@ interface QueryResult {
   data?: any[]
   error?: string
   message?: string
+}
+
+interface AdminSettings {
+  database: {
+    host: string
+    port: string
+    user: string
+    password: string
+  }
+  executable: {
+    path: string
+    defaultParams: string
+  }
 }
 
 export default function SQLPanel() {
@@ -34,6 +47,33 @@ export default function SQLPanel() {
   const [executablePath, setExecutablePath] = useState('')
   const [executableParams, setExecutableParams] = useState('')
   const [savedCsvPath, setSavedCsvPath] = useState('')
+  const [adminSettings, setAdminSettings] = useState<AdminSettings>({
+    database: { host: '', port: '', user: '', password: '' },
+    executable: { path: '', defaultParams: '' }
+  })
+
+  // Load saved settings on mount
+  useEffect(() => {
+    const loadSavedSettings = async () => {
+      try {
+        const response = await fetch('/api/admin-settings')
+        const data = await response.json()
+        if (data.success) {
+          setAdminSettings(data.settings)
+          // Pre-fill credentials if not already set
+          if (!credentials.host && !credentials.port && !credentials.user && !credentials.password) {
+            setCredentials({
+              ...credentials,
+              ...data.settings.database
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load saved settings:', error)
+      }
+    }
+    loadSavedSettings()
+  }, [])
 
   const fetchDatabases = async () => {
     try {
@@ -46,7 +86,6 @@ export default function SQLPanel() {
       const data = await response.json()
       if (data.success) {
         setDatabases(data.databases)
-        // Clear any previous error messages if successful
         if (result?.error?.includes('Failed to fetch databases')) {
           setResult(null)
         }
@@ -73,7 +112,6 @@ export default function SQLPanel() {
     setLoading(true)
     setResult(null)
 
-    // Create new AbortController for this request
     const controller = new AbortController()
     setAbortController(controller)
 
@@ -219,7 +257,7 @@ export default function SQLPanel() {
             <CardHeader>
               <CardTitle>SQL Query</CardTitle>
             </CardHeader>
-          <CardContent>
+            <CardContent>
               <div className="space-y-4">
                 <Textarea
                   placeholder="Enter your SQL query here (e.g., SELECT * FROM users)"
@@ -290,6 +328,16 @@ export default function SQLPanel() {
           </Card>
         </form>
 
+        <div className="fixed bottom-4 right-4">
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = '/admin'}
+            className="bg-white hover:bg-gray-100"
+          >
+            Admin Settings
+          </Button>
+        </div>
+
         {savedCsvPath && (
           <Card className="mt-6">
             <CardHeader>
@@ -302,7 +350,7 @@ export default function SQLPanel() {
                   <Input
                     id="executablePath"
                     placeholder="Enter path to executable (e.g., C:\ameise.exe)"
-                    value={executablePath}
+                    value={executablePath || adminSettings.executable.path}
                     onChange={(e) => setExecutablePath(e.target.value)}
                   />
                 </div>
@@ -311,7 +359,7 @@ export default function SQLPanel() {
                   <Input
                     id="executableParams"
                     placeholder="Enter parameters (use {csv} to reference the saved CSV file)"
-                    value={executableParams}
+                    value={executableParams || adminSettings.executable.defaultParams}
                     onChange={(e) => setExecutableParams(e.target.value)}
                   />
                 </div>
