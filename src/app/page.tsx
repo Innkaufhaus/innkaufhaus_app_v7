@@ -13,6 +13,7 @@ interface QueryResult {
   success: boolean
   data?: any[]
   error?: string
+  message?: string
 }
 
 export default function SQLPanel() {
@@ -29,6 +30,10 @@ export default function SQLPanel() {
   const [databases, setDatabases] = useState<string[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const [csvFilename, setCsvFilename] = useState('')
+  const [executablePath, setExecutablePath] = useState('')
+  const [executableParams, setExecutableParams] = useState('')
+  const [savedCsvPath, setSavedCsvPath] = useState('')
 
   const fetchDatabases = async () => {
     try {
@@ -285,12 +290,126 @@ export default function SQLPanel() {
           </Card>
         </form>
 
+        {savedCsvPath && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Execute File</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="executablePath">Executable Path</Label>
+                  <Input
+                    id="executablePath"
+                    placeholder="Enter path to executable (e.g., C:\ameise.exe)"
+                    value={executablePath}
+                    onChange={(e) => setExecutablePath(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="executableParams">Parameters</Label>
+                  <Input
+                    id="executableParams"
+                    placeholder="Enter parameters (use {csv} to reference the saved CSV file)"
+                    value={executableParams}
+                    onChange={(e) => setExecutableParams(e.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    if (!executablePath) return
+                    try {
+                      const params = executableParams
+                        .split(' ')
+                        .map(param => param.replace('{csv}', savedCsvPath))
+                      
+                      const response = await fetch('/api/execute-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          filePath: executablePath,
+                          parameters: params
+                        }),
+                      })
+                      const data = await response.json()
+                      setResult({
+                        success: data.success,
+                        data: data.success ? data.output : null,
+                        error: data.error
+                      })
+                    } catch (error) {
+                      setResult({
+                        success: false,
+                        error: error instanceof Error ? error.message : 'Failed to execute file'
+                      })
+                    }
+                  }}
+                  disabled={!executablePath}
+                >
+                  Execute
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {result && (
           <Card>
             <CardHeader>
               <CardTitle>Results</CardTitle>
             </CardHeader>
             <CardContent>
+              {result?.success && Array.isArray(result.data) && result.data.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex space-x-4 items-end">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="csvFilename">Save as CSV</Label>
+                      <Input
+                        id="csvFilename"
+                        placeholder="Enter filename (e.g., results.csv)"
+                        value={csvFilename}
+                        onChange={(e) => setCsvFilename(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        if (!csvFilename) return
+                        try {
+                          const response = await fetch('/api/save-csv', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              data: result.data,
+                              filename: csvFilename
+                            }),
+                          })
+                          const data = await response.json()
+                          if (data.success) {
+                            setSavedCsvPath(data.filePath)
+                            setResult({
+                              success: true,
+                              data: result.data,
+                              message: 'CSV file saved successfully'
+                            })
+                          } else {
+                            throw new Error(data.error)
+                          }
+                        } catch (error) {
+                          setResult({
+                            success: false,
+                            error: error instanceof Error ? error.message : 'Failed to save CSV'
+                          })
+                        }
+                      }}
+                      disabled={!csvFilename}
+                    >
+                      Save CSV
+                    </Button>
+                  </div>
+                </div>
+              )}
               {result.success ? (
                 <div className="overflow-x-auto">
                   {Array.isArray(result.data) && result.data.length > 0 ? (
