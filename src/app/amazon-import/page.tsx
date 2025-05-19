@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useRouter } from "next/navigation"
+import { Combobox } from "@/components/ui/combobox"
+import Link from "next/link"
 
 interface ConnectionDetails {
   host: string
@@ -25,26 +27,44 @@ export default function AmazonImportPage() {
   const [productPrice, setProductPrice] = useState<number | null>(null)
   const [han, setHan] = useState("")
   const [supplier, setSupplier] = useState("")
-  const [supplierSuggestions, setSupplierSuggestions] = useState<string[]>([])
+  const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([])
   const [purchasePriceFactor, setPurchasePriceFactor] = useState<number | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null)
 
-  // Load connection details from admin settings
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const response = await fetch('/api/admin-settings')
         const data = await response.json()
         if (data.success && data.settings?.database) {
-          setConnectionDetails({
+          const dbConfig = {
             host: data.settings.database.host,
             port: parseInt(data.settings.database.port),
             user: data.settings.database.user,
             password: data.settings.database.password,
-            database: 'eazybusiness' // Default database
+            database: 'eazybusiness'
+          }
+          setConnectionDetails(dbConfig)
+          
+          const supplierResponse = await fetch("/api/supplier", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "list",
+              connectionDetails: dbConfig
+            }),
           })
+          const supplierData = await supplierResponse.json()
+          if (supplierData.success) {
+            setSupplierOptions(
+              supplierData.suppliers.map((s: string) => ({ 
+                value: s, 
+                label: s 
+              }))
+            )
+          }
         }
       } catch (error) {
         console.error('Failed to load connection settings:', error)
@@ -79,7 +99,6 @@ export default function AmazonImportPage() {
         setProductTitle(data.product.title)
         setProductPrice(data.product.price)
         setMessage({ type: "success", text: "Product info fetched successfully." })
-        // For books, set HAN to EAN
         if (taxRate === "7") {
           setHan(ean)
         }
@@ -90,28 +109,6 @@ export default function AmazonImportPage() {
       setMessage({ type: "error", text: "Failed to fetch product info." })
     } finally {
       setLoading(false)
-    }
-  }
-
-  const searchSuppliers = async (searchTerm: string) => {
-    if (!connectionDetails) return
-
-    try {
-      const response = await fetch("/api/supplier", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "search",
-          supplier: searchTerm,
-          connectionDetails
-        }),
-      })
-      const data = await response.json()
-      if (data.success) {
-        setSupplierSuggestions(data.suppliers)
-      }
-    } catch (error) {
-      console.error('Failed to search suppliers:', error)
     }
   }
 
@@ -171,7 +168,6 @@ export default function AmazonImportPage() {
       const data = await response.json()
       if (data.success) {
         setMessage({ type: "success", text: "Article imported successfully!" })
-        // Reset form
         setEan("")
         setProductTitle("")
         setProductPrice(null)
@@ -209,7 +205,12 @@ export default function AmazonImportPage() {
     <main className="container mx-auto p-4 max-w-4xl">
       <Card>
         <CardHeader>
-          <CardTitle>Amazon Article Import</CardTitle>
+          <CardTitle className="flex justify-between items-center">
+            <span>Amazon Article Import</span>
+            <Button variant="outline" asChild>
+              <Link href="/amazon-import/batch">Batch Import</Link>
+            </Button>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
@@ -267,22 +268,14 @@ export default function AmazonImportPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="supplier">Supplier</Label>
-              <Input
-                id="supplier"
+              <Label>Supplier</Label>
+              <Combobox
+                options={supplierOptions}
                 value={supplier}
-                onChange={(e) => {
-                  setSupplier(e.target.value)
-                  searchSuppliers(e.target.value)
-                }}
-                placeholder="Search supplier"
-                list="supplier-suggestions"
+                onValueChange={setSupplier}
+                placeholder="Select supplier"
+                emptyText="No suppliers found."
               />
-              <datalist id="supplier-suggestions">
-                {supplierSuggestions.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
             </div>
 
             <Button 
