@@ -38,33 +38,45 @@ export default function AmazonImportPage() {
       try {
         const response = await fetch('/api/admin-settings')
         const data = await response.json()
+        let dbConfig
         if (data.success && data.settings?.database) {
-          const dbConfig = {
+          dbConfig = {
             host: data.settings.database.host,
             port: parseInt(data.settings.database.port),
             user: data.settings.database.user,
             password: data.settings.database.password,
             database: 'eazybusiness'
           }
-          setConnectionDetails(dbConfig)
-          
-          const supplierResponse = await fetch("/api/supplier", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "list",
-              connectionDetails: dbConfig
-            }),
-          })
-          const supplierData = await supplierResponse.json()
-          if (supplierData.success) {
-            setSupplierOptions(
-              supplierData.suppliers.map((s: string) => ({ 
-                value: s, 
-                label: s 
-              }))
-            )
+          setMessage({ type: "success", text: "Loaded database connection settings." })
+        } else {
+          // Use default connection parameters
+          dbConfig = {
+            host: "192.168.178.200",
+            port: 50815,
+            user: "sqluser",
+            password: "sa04jT14",
+            database: "eazybusiness"
           }
+          setMessage({ type: "success", text: "Using default database connection settings." })
+        }
+        setConnectionDetails(dbConfig)
+        
+        const supplierResponse = await fetch("/api/supplier", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "list",
+            connectionDetails: dbConfig
+          }),
+        })
+        const supplierData = await supplierResponse.json()
+        if (supplierData.success) {
+          setSupplierOptions(
+            supplierData.suppliers.map((s: string) => ({ 
+              value: s, 
+              label: s 
+            }))
+          )
         }
       } catch (error) {
         console.error('Failed to load connection settings:', error)
