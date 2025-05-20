@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Textarea } from "@/components/ui/textarea"
 
 export default function AdminPage() {
   const [settings, setSettings] = useState({
@@ -24,6 +25,9 @@ export default function AdminPage() {
 
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [testing, setTesting] = useState(false)
+  const [executing, setExecuting] = useState(false)
+  const [consoleOutput, setConsoleOutput] = useState("")
+  const [parameters, setParameters] = useState("")
 
   const handleSave = async () => {
     try {
@@ -71,11 +75,54 @@ export default function AdminPage() {
     }
   }
 
+  const executeAmeise = async () => {
+    setExecuting(true)
+    setMessage(null)
+    setConsoleOutput("")
+    try {
+      const response = await fetch("/api/execute-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: settings.executable.path,
+          parameters: parameters || settings.executable.defaultParams
+        })
+      })
+
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error("No response stream")
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        const text = new TextDecoder().decode(value)
+        setConsoleOutput(prev => prev + text)
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to execute ameise.exe" })
+    } finally {
+      setExecuting(false)
+    }
+  }
+
+  const abortExecution = async () => {
+    try {
+      await fetch("/api/execute-file", {
+        method: "DELETE"
+      })
+      setMessage({ type: "success", text: "Execution aborted" })
+      setExecuting(false)
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to abort execution" })
+    }
+  }
+
   return (
-    <main className="container mx-auto p-4 max-w-2xl">
+    <main className="container mx-auto p-4 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Admin Settings</CardTitle>
+          <CardTitle>Database Settings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
@@ -158,9 +205,15 @@ export default function AdminPage() {
               {testing ? "Testing..." : "Test Connection"}
             </Button>
           </div>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Ameise Execution</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Executable Settings</h3>
             <div className="space-y-2">
               <Label htmlFor="exec-path">Executable Path</Label>
               <Input
@@ -172,12 +225,22 @@ export default function AdminPage() {
                     executable: { ...settings.executable, path: e.target.value }
                   })
                 }
+                placeholder="Path to ameise.exe"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="exec-params">Default Parameters</Label>
+              <Label htmlFor="exec-params">Parameters</Label>
               <Input
                 id="exec-params"
+                value={parameters}
+                onChange={(e) => setParameters(e.target.value)}
+                placeholder="Enter execution parameters"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="default-params">Default Parameters</Label>
+              <Input
+                id="default-params"
                 value={settings.executable.defaultParams}
                 onChange={(e) =>
                   setSettings({
@@ -185,19 +248,44 @@ export default function AdminPage() {
                     executable: { ...settings.executable, defaultParams: e.target.value }
                   })
                 }
+                placeholder="Default parameters"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <Button 
+                onClick={executeAmeise} 
+                disabled={executing}
+                className="flex-1"
+              >
+                {executing ? "Executing..." : "Execute"}
+              </Button>
+              <Button 
+                onClick={abortExecution} 
+                disabled={!executing}
+                variant="destructive"
+              >
+                Abort
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label>Console Output</Label>
+              <Textarea
+                value={consoleOutput}
+                readOnly
+                className="h-[200px] font-mono bg-black text-green-400"
               />
             </div>
           </div>
-
-          <Button onClick={handleSave} className="w-full">Save Settings</Button>
-
-          {message && (
-            <Alert variant={message.type === "success" ? "default" : "destructive"}>
-              <AlertDescription>{message.text}</AlertDescription>
-            </Alert>
-          )}
         </CardContent>
       </Card>
+
+      <Button onClick={handleSave} className="w-full">Save All Settings</Button>
+
+      {message && (
+        <Alert variant={message.type === "success" ? "default" : "destructive"}>
+          <AlertDescription>{message.text}</AlertDescription>
+        </Alert>
+      )}
     </main>
   )
 }

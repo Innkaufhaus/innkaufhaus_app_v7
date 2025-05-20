@@ -1,44 +1,65 @@
 import { NextResponse } from 'next/server'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-import { join } from 'path'
+import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 
-const execAsync = promisify(exec)
+let currentProcess: ChildProcessWithoutNullStreams | null = null
 
 export async function POST(req: Request) {
   try {
-    const { filePath, parameters } = await req.json()
-
-    if (!filePath) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'File path is required' 
-      }, { status: 400 })
+    if (currentProcess) {
+      return NextResponse.json({ success: false, error: 'Process already running' }, { status: 409 })
     }
 
-    // Construct the command with parameters
-    const command = `"${filePath}" ${parameters ? parameters.join(' ') : ''}`
-
-    // Execute the command
-    const { stdout, stderr } = await execAsync(command)
-
-    if (stderr) {
-      return NextResponse.json({ 
-        success: false, 
-        error: stderr 
-      }, { status: 500 })
+    const { path, parameters } = await req.json()
+    if (!path) {
+      return NextResponse.json({ success: false, error: 'Executable path is required' }, { status: 400 })
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      output: stdout,
-      message: 'File executed successfully' 
-    })
+    const args = parameters ? parameters.split(' ') : []
+
+    currentProcess = spawn(path, args)
+
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          currentProcess!.stdout.on('data', (data) => {
+            controller.enqueue(new TextEncoder().encode(data.toString()))
+          })
+
+          currentProcess!.stderr.on('data', (data) => {
+            controller.enqueue(new TextEncoder().encode(data.toString()))
+          })
+
+          currentProcess!.on('close', (code) => {
+            controller.close()
+            currentProcess = null
+          })
+
+          currentProcess!.on('error', (err) => {
+            controller.error(err)
+            currentProcess = null
+          })
+        }
+      }),
+      {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        }
+      }
+    )
   } catch (error) {
-    console.error('Failed to execute file:', error)
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to execute file'
-    }, { status: 500 })
+    currentProcess = null
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed to execute file' }, { status: 500 })
+  }
+}
+
+export async function DELETE() {
+  if (currentProcess) {
+    currentProcess.kill()
+    currentProcess = null
+    return NextResponse.json({ success: true, message: 'Process aborted' })
+  } else {
+    return NextResponse.json({ success: false, error: 'No process running' }, { status: 400 })
   }
 }
