@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { executeQuery } from '@/lib/db'
 
 interface SupplierRequest {
-  action: 'search' | 'getPurchaseFactor'
-  supplier: string
+  action: 'search' | 'getPurchaseFactor' | 'list'
+  supplier?: string
   connectionDetails: {
     host: string
     port: number
@@ -18,14 +18,40 @@ export async function POST(req: Request) {
     const { action, supplier, connectionDetails }: SupplierRequest = await req.json()
 
     switch (action) {
+      case 'list': {
+        // Get all suppliers
+        const query = 'SELECT cfirma FROM tlieferant ORDER BY cfirma'
+        const result = await executeQuery(connectionDetails, query)
+        
+        if (!result.success) {
+          return NextResponse.json({
+            success: false,
+            error: result.error
+          }, { status: 500 })
+        }
+
+        return NextResponse.json({
+          success: true,
+          suppliers: (result.data as Array<{ cfirma: string }>).map(row => row.cfirma)
+        })
+      }
+
       case 'search': {
+        if (!supplier) {
+          return NextResponse.json({
+            success: false,
+            error: 'Supplier search term is required'
+          }, { status: 400 })
+        }
+
         // Search for suppliers matching the input
-        const searchQuery = `
-          SELECT tlieferant.cfirma 
+        const query = `
+          SELECT cfirma 
           FROM tlieferant 
-          WHERE tlieferant.cfirma LIKE '%${supplier}%'
+          WHERE cfirma LIKE '%${supplier}%'
+          ORDER BY cfirma
         `
-        const result = await executeQuery(connectionDetails, searchQuery)
+        const result = await executeQuery(connectionDetails, query)
         
         if (!result.success) {
           return NextResponse.json({
@@ -41,15 +67,22 @@ export async function POST(req: Request) {
       }
 
       case 'getPurchaseFactor': {
+        if (!supplier) {
+          return NextResponse.json({
+            success: false,
+            error: 'Supplier name is required'
+          }, { status: 400 })
+        }
+
         // Calculate purchase price factor for the supplier
-        const factorQuery = `
+        const query = `
           SELECT SUM(tArtikel.fVKNetto)/NULLIF(SUM(tArtikel.fEKNetto), 0) as factor
           FROM tArtikel 
           JOIN tliefartikel ON tliefartikel.tArtikel_kArtikel = tartikel.kArtikel
           JOIN tlieferant ON tliefartikel.tLieferant_kLieferant = tlieferant.kLieferant
           WHERE tlieferant.cfirma = '${supplier}'
         `
-        const result = await executeQuery(connectionDetails, factorQuery)
+        const result = await executeQuery(connectionDetails, query)
         
         if (!result.success) {
           return NextResponse.json({

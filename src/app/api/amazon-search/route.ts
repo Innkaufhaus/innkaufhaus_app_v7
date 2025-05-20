@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server'
 
 interface AmazonSearchResponse {
-  results?: {
-    content?: {
-      results?: {
-        organic?: {
-          title?: string
+  results: Array<{
+    content: {
+      results: {
+        organic: Array<{
+          title: string
           price?: number
-        }
+          price_from?: number
+          price_upper?: number
+        }>
       }
     }
-  }
+  }>
 }
 
 export async function POST(req: Request) {
@@ -38,19 +40,31 @@ export async function POST(req: Request) {
     })
 
     const data: AmazonSearchResponse = await response.json()
+    console.log('Amazon API Response:', JSON.stringify(data, null, 2))
     
-    if (!data.results?.content?.results?.organic) {
+    if (!data.results?.[0]?.content?.results?.organic?.[0]) {
       return NextResponse.json({
         success: false,
         error: 'No product found'
       }, { status: 404 })
     }
 
+    const product = data.results[0].content.results.organic[0]
+    const price = product.price || product.price_from || product.price_upper
+
+    if (!price) {
+      console.error('No price found in product data:', product)
+      return NextResponse.json({
+        success: false,
+        error: 'No price found for product'
+      }, { status: 404 })
+    }
+
     return NextResponse.json({
       success: true,
       product: {
-        title: data.results.content.results.organic.title,
-        price: data.results.content.results.organic.price
+        title: product.title,
+        price: price
       }
     })
   } catch (error) {

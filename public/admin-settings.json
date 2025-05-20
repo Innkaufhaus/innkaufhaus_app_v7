@@ -1,0 +1,12 @@
+{
+  "database": {
+    "host": "192.168.178.200",
+    "port": "50815",
+    "user": "sa",
+    "password": "sa04jT14"
+  },
+  "executable": {
+    "path": "",
+    "defaultParams": ""
+  }
+}
