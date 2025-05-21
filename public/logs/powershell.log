@@ -1,0 +1,18 @@
+[2025-05-21T12:32:46.101Z] [INFO] Attempting SQL Server connection to 192.168.178.200:50815 as sa
+[2025-05-21T12:32:46.102Z] [INFO] Establishing database connection...
+[2025-05-21T12:33:16.111Z] [ERROR] Database error: Failed to connect to 192.168.178.200:50815 in 30000ms
+[2025-05-21T12:33:16.112Z] [ERROR] SQL Server error details: code=ETIMEOUT, number=undefined
+[2025-05-21T12:33:16.112Z] [INFO] Database connection closed
+[2025-05-21T12:35:46.388Z] [INFO] Attempting SQL Server connection to 192.168.178.200:50815 as sa
+[2025-05-21T12:35:46.389Z] [INFO] Establishing database connection...
+[2025-05-21T12:36:16.393Z] [ERROR] Database error: Failed to connect to 192.168.178.200:50815 in 30000ms
+[2025-05-21T12:36:16.394Z] [ERROR] SQL Server error details: code=ETIMEOUT, number=undefined
+[2025-05-21T12:36:16.395Z] [INFO] Database connection closed
+[2025-05-21T17:56:02.804Z] [INFO] Logger initialized
+[2025-05-21T17:56:02.892Z] [INFO] Logger initialized
+[2025-05-21T17:56:02.892Z] [INFO] Logger initialized
+[2025-05-21T17:56:02.916Z] [INFO] Logger initialized
+[2025-05-21T17:58:56.293Z] [INFO] Logger initialized
+[2025-05-21T17:58:56.446Z] [INFO] Logger initialized
+[2025-05-21T17:58:56.446Z] [INFO] Logger initialized
+[2025-05-21T17:58:56.605Z] [INFO] Logger initialized

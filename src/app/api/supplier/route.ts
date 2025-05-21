@@ -16,23 +16,36 @@ interface SupplierRequest {
 export async function POST(req: Request) {
   try {
     const { action, supplier, connectionDetails }: SupplierRequest = await req.json()
+    console.log('Supplier API request:', { action, supplier, connectionDetails })
+
+    // Ensure database is set explicitly
+    if (!connectionDetails.database) {
+      connectionDetails.database = 'eazybusiness'
+    }
 
     switch (action) {
       case 'list': {
         // Get all suppliers
-        const query = 'SELECT cfirma FROM tlieferant ORDER BY cfirma'
+        const query = 'SELECT DISTINCT cFirma FROM tLieferant WHERE cFirma IS NOT NULL AND cFirma != \'\' ORDER BY cFirma'
+        console.log('Executing supplier list query:', query)
+        
         const result = await executeQuery(connectionDetails, query)
+        console.log('Supplier list result:', result)
         
         if (!result.success) {
+          console.error('Failed to fetch suppliers:', result.error)
           return NextResponse.json({
             success: false,
             error: result.error
           }, { status: 500 })
         }
 
+        const suppliers = (result.data as Array<{ cFirma: string }>).map(row => row.cFirma)
+        console.log('Found suppliers:', suppliers)
+
         return NextResponse.json({
           success: true,
-          suppliers: (result.data as Array<{ cfirma: string }>).map(row => row.cfirma)
+          suppliers
         })
       }
 
@@ -46,10 +59,12 @@ export async function POST(req: Request) {
 
         // Search for suppliers matching the input
         const query = `
-          SELECT cfirma 
-          FROM tlieferant 
-          WHERE cfirma LIKE '%${supplier}%'
-          ORDER BY cfirma
+          SELECT DISTINCT cFirma 
+          FROM tLieferant 
+          WHERE cFirma LIKE '%${supplier}%'
+            AND cFirma IS NOT NULL 
+            AND cFirma != ''
+          ORDER BY cFirma
         `
         const result = await executeQuery(connectionDetails, query)
         
@@ -62,7 +77,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
           success: true,
-          suppliers: (result.data as Array<{ cfirma: string }>).map(row => row.cfirma)
+          suppliers: (result.data as Array<{ cFirma: string }>).map(row => row.cFirma)
         })
       }
 
@@ -78,9 +93,11 @@ export async function POST(req: Request) {
         const query = `
           SELECT SUM(tArtikel.fVKNetto)/NULLIF(SUM(tArtikel.fEKNetto), 0) as factor
           FROM tArtikel 
-          JOIN tliefartikel ON tliefartikel.tArtikel_kArtikel = tartikel.kArtikel
-          JOIN tlieferant ON tliefartikel.tLieferant_kLieferant = tlieferant.kLieferant
-          WHERE tlieferant.cfirma = '${supplier}'
+          JOIN tLiefArtikel ON tLiefArtikel.tArtikel_kArtikel = tArtikel.kArtikel
+          JOIN tLieferant ON tLiefArtikel.tLieferant_kLieferant = tLieferant.kLieferant
+          WHERE tLieferant.cFirma = '${supplier}'
+            AND tArtikel.fVKNetto > 0 
+            AND tArtikel.fEKNetto > 0
         `
         const result = await executeQuery(connectionDetails, query)
         
@@ -109,7 +126,7 @@ export async function POST(req: Request) {
     console.error('Supplier API error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Failed to process supplier request'
+      error: error instanceof Error ? error.message : 'Failed to process supplier request'
     }, { status: 500 })
   }
 }

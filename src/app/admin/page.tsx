@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,10 +11,10 @@ import { Textarea } from "@/components/ui/textarea"
 export default function AdminPage() {
   const [settings, setSettings] = useState({
     database: {
-      host: "192.168.178.200",
-      port: "50815",
-      user: "sa",
-      password: "sa04jT14",
+      host: "",
+      port: "",
+      user: "",
+      password: "",
       name: "eazybusiness"
     },
     executable: {
@@ -29,12 +29,50 @@ export default function AdminPage() {
   const [consoleOutput, setConsoleOutput] = useState("")
   const [parameters, setParameters] = useState("")
 
+  useEffect(() => {
+    // Load saved settings
+    const loadSettings = async () => {
+      try {
+        const response = await fetch('/api/admin-settings')
+        const data = await response.json()
+        if (data.success && data.settings) {
+          setSettings({
+            database: {
+              host: data.settings.database.host || "",
+              port: data.settings.database.port || "",
+              user: data.settings.database.user || "",
+              password: data.settings.database.password || "",
+              name: "eazybusiness" // Always use eazybusiness as the database
+            },
+            executable: {
+              path: data.settings.executable.path || "",
+              defaultParams: data.settings.executable.defaultParams || ""
+            }
+          })
+          setMessage({ type: "success", text: "Settings loaded successfully" })
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error)
+        setMessage({ type: "error", text: "Failed to load settings" })
+      }
+    }
+    loadSettings()
+  }, [])
+
   const handleSave = async () => {
     try {
       const response = await fetch("/api/admin-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings)
+        body: JSON.stringify({
+          database: {
+            host: settings.database.host,
+            port: settings.database.port,
+            user: settings.database.user,
+            password: settings.database.password
+          },
+          executable: settings.executable
+        })
       })
       const data = await response.json()
       if (data.success) {
@@ -43,6 +81,7 @@ export default function AdminPage() {
         setMessage({ type: "error", text: data.error || "Failed to save settings" })
       }
     } catch (error) {
+      console.error('Save settings error:', error)
       setMessage({ type: "error", text: "Failed to save settings" })
     }
   }
@@ -51,25 +90,47 @@ export default function AdminPage() {
     setTesting(true)
     setMessage(null)
     try {
+      const connectionDetails = {
+        host: settings.database.host,
+        port: parseInt(settings.database.port),
+        user: settings.database.user,
+        password: settings.database.password,
+        database: settings.database.name
+      }
+      
+      const logDetails = {
+        host: connectionDetails.host,
+        port: connectionDetails.port,
+        user: connectionDetails.user,
+        database: connectionDetails.database,
+        password: '********'
+      }
+      console.log('Testing connection with:', logDetails)
+
       const response = await fetch("/api/test-connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          host: settings.database.host,
-          port: parseInt(settings.database.port),
-          user: settings.database.user,
-          password: settings.database.password,
-          database: settings.database.name
-        })
+        body: JSON.stringify(connectionDetails)
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
       const data = await response.json()
+      console.log('Test connection response:', data)
+
       if (data.success) {
         setMessage({ type: "success", text: "Database connection successful" })
       } else {
         setMessage({ type: "error", text: data.error || "Connection test failed" })
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Connection test failed" })
+      console.error('Test connection error:', error)
+      setMessage({ 
+        type: "error", 
+        text: error instanceof Error ? error.message : "Connection test failed" 
+      })
     } finally {
       setTesting(false)
     }
@@ -100,6 +161,7 @@ export default function AdminPage() {
         setConsoleOutput(prev => prev + text)
       }
     } catch (error) {
+      console.error('Execute ameise error:', error)
       setMessage({ type: "error", text: "Failed to execute ameise.exe" })
     } finally {
       setExecuting(false)
@@ -114,6 +176,7 @@ export default function AdminPage() {
       setMessage({ type: "success", text: "Execution aborted" })
       setExecuting(false)
     } catch (error) {
+      console.error('Abort execution error:', error)
       setMessage({ type: "error", text: "Failed to abort execution" })
     }
   }
@@ -189,13 +252,10 @@ export default function AdminPage() {
               <Input
                 id="db-name"
                 value={settings.database.name}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    database: { ...settings.database, name: e.target.value }
-                  })
-                }
+                disabled
+                className="bg-gray-100"
               />
+              <p className="text-sm text-gray-500">Fixed to eazybusiness database</p>
             </div>
             <Button 
               onClick={testConnection} 

@@ -25,6 +25,7 @@ export default function AmazonImportPage() {
   const [taxRate, setTaxRate] = useState("19")
   const [productTitle, setProductTitle] = useState("")
   const [productPrice, setProductPrice] = useState<number | null>(null)
+  const [purchasePrice, setPurchasePrice] = useState<number | null>(null)
   const [han, setHan] = useState("")
   const [supplier, setSupplier] = useState("")
   const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([])
@@ -32,6 +33,8 @@ export default function AmazonImportPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null)
+  const [profitMargin, setProfitMargin] = useState<number | null>(null)
+  const [csvPath, setCsvPath] = useState<string | null>(null)
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -53,7 +56,7 @@ export default function AmazonImportPage() {
           dbConfig = {
             host: "192.168.178.200",
             port: 50815,
-            user: "sqluser",
+            user: "sa",
             password: "sa04jT14",
             database: "eazybusiness"
           }
@@ -88,6 +91,26 @@ export default function AmazonImportPage() {
     }
     loadSettings()
   }, [])
+
+  useEffect(() => {
+    // Calculate profit margin whenever product price or purchase price changes
+    if (productPrice && purchasePrice) {
+      const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
+      const nettoPrice = productPrice / taxMultiplier
+      const margin = ((nettoPrice - purchasePrice) / purchasePrice) * 100
+      setProfitMargin(margin)
+
+      // Check for high margin warning
+      if (nettoPrice / purchasePrice > 7) {
+        setMessage({
+          type: "error",
+          text: "Warning: Price/Purchase price ratio is above factor 7!"
+        })
+      }
+    } else {
+      setProfitMargin(null)
+    }
+  }, [productPrice, purchasePrice, taxRate])
 
   const validateEan = (ean: string) => {
     return /^\d{13}$/.test(ean)
@@ -143,6 +166,15 @@ export default function AmazonImportPage() {
       const data = await response.json()
       if (data.success) {
         setPurchasePriceFactor(data.factor)
+        
+        // Auto-calculate purchase price
+        if (productPrice) {
+          const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
+          const nettoPrice = productPrice / taxMultiplier
+          const calculatedPurchasePrice = nettoPrice / data.factor * 0.9
+          setPurchasePrice(calculatedPurchasePrice)
+        }
+        
         setMessage({ type: "success", text: `Purchase price factor calculated: ${data.factor}` })
       } else {
         setMessage({ type: "error", text: data.error || "Failed to calculate factor." })
@@ -153,17 +185,16 @@ export default function AmazonImportPage() {
   }
 
   const importArticle = async () => {
-    if (!connectionDetails || !productPrice || !purchasePriceFactor) {
+    if (!connectionDetails || !productPrice || !purchasePrice) {
       setMessage({ type: "error", text: "Missing required information." })
       return
     }
 
     const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
     const nettoPrice = productPrice / taxMultiplier
-    const purchasePrice = nettoPrice / purchasePriceFactor * 0.9
 
     try {
-      const response = await fetch("/api/article-import", {
+      const response = await fetch("/api/save-import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -172,6 +203,7 @@ export default function AmazonImportPage() {
           han,
           bruttoPrice: productPrice,
           nettoPrice,
+          purchasePrice,
           supplier,
           taxRate,
           connectionDetails
@@ -179,18 +211,32 @@ export default function AmazonImportPage() {
       })
       const data = await response.json()
       if (data.success) {
-        setMessage({ type: "success", text: "Article imported successfully!" })
+        setCsvPath(data.csvPath)
+        setMessage({ 
+          type: "success", 
+          text: `Article imported successfully! CSV saved at: ${data.csvPath}` 
+        })
         setEan("")
         setProductTitle("")
         setProductPrice(null)
+        setPurchasePrice(null)
         setHan("")
         setSupplier("")
         setPurchasePriceFactor(null)
+        setProfitMargin(null)
       } else {
-        setMessage({ type: "error", text: data.error || "Failed to import article." })
+        if (data.csvPath) {
+          setCsvPath(data.csvPath)
+          setMessage({ 
+            type: "error", 
+            text: `CSV saved at ${data.csvPath} but Ameise import failed: ${data.error}` 
+          })
+        } else {
+          setMessage({ type: "error", text: data.error || "Failed to import article" })
+        }
       }
     } catch (error) {
-      setMessage({ type: "error", text: "Failed to import article." })
+      setMessage({ type: "error", text: "Failed to import article" })
     }
   }
 
@@ -290,22 +336,55 @@ export default function AmazonImportPage() {
               />
             </div>
 
-            <Button 
-              onClick={calculatePurchasePriceFactor}
-              disabled={!supplier}
-            >
-              Calculate Purchase Price Factor
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                onClick={calculatePurchasePriceFactor}
+                disabled={!supplier}
+                className="w-full"
+              >
+                Auto-Calculate Purchase Price
+              </Button>
 
-            {purchasePriceFactor !== null && (
-              <div className="p-4 bg-muted rounded-md">
-                <p><strong>Purchase Price Factor:</strong> {purchasePriceFactor.toFixed(2)}</p>
+              <Label htmlFor="purchase-price">Purchase Price (€)</Label>
+              <Input
+                id="purchase-price"
+                type="number"
+                step="0.01"
+                value={purchasePrice?.toString() || ""}
+                onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || null)}
+                placeholder="Enter purchase price"
+              />
+            </div>
+
+            {(purchasePriceFactor !== null || purchasePrice !== null) && (
+              <div className="p-4 bg-muted rounded-md space-y-2">
+                {purchasePriceFactor !== null && (
+                  <p><strong>Purchase Price Factor:</strong> {purchasePriceFactor.toFixed(2)}</p>
+                )}
+                {profitMargin !== null && (
+                  <div className="flex items-center space-x-2">
+                    <strong>Profit Margin:</strong>
+                    <span className={`font-medium ${
+                      profitMargin < 0 ? 'text-red-500' :
+                      profitMargin > 700 ? 'text-red-500' :
+                      profitMargin > 100 ? 'text-green-500' :
+                      'text-yellow-500'
+                    }`}>
+                      {profitMargin.toFixed(2)}%
+                    </span>
+                    {profitMargin > 700 && (
+                      <span className="text-red-500 text-sm">
+                        (Warning: Very high margin!)
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
             <Button
               onClick={importArticle}
-              disabled={!productTitle || !han || !supplier || purchasePriceFactor === null}
+              disabled={!productTitle || !han || !supplier || !purchasePrice}
               className="w-full"
             >
               Import Article
@@ -315,6 +394,12 @@ export default function AmazonImportPage() {
               <Alert variant={message.type === "success" ? "default" : "destructive"}>
                 <AlertDescription>{message.text}</AlertDescription>
               </Alert>
+            )}
+
+            {csvPath && (
+              <div className="p-4 bg-muted rounded-md">
+                <p><strong>CSV File:</strong> {csvPath}</p>
+              </div>
             )}
           </div>
         </CardContent>

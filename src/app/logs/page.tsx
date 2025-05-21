@@ -3,88 +3,96 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-
-interface Log {
-  timestamp: string
-  type: string
-  message: string
-}
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function LogsPage() {
-  const [logs, setLogs] = useState<string[]>([])
-  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [generalLogs, setGeneralLogs] = useState<string[]>([])
+  const [sqlLogs, setSqlLogs] = useState<string[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const fetchLogs = async () => {
+    setLoading(true)
+    setError(null)
     try {
-      const response = await fetch('/api/powershell-log')
-      const data = await response.json()
-      if (data.success) {
-        setLogs(data.logs)
+      // Fetch general logs
+      const generalResponse = await fetch('/api/powershell-log?category=GENERAL')
+      const generalData = await generalResponse.json()
+      if (generalData.success) {
+        setGeneralLogs(generalData.logs)
+      }
+
+      // Fetch SQL logs
+      const sqlResponse = await fetch('/api/powershell-log?category=SQL')
+      const sqlData = await sqlResponse.json()
+      if (sqlData.success) {
+        setSqlLogs(sqlData.logs)
       }
     } catch (error) {
-      console.error('Failed to fetch logs:', error)
+      setError('Failed to fetch logs')
+      console.error('Error fetching logs:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
     fetchLogs()
-    
-    let interval: NodeJS.Timeout
-    if (autoRefresh) {
-      interval = setInterval(fetchLogs, 5000) // Refresh every 5 seconds
-    }
-    
-    return () => {
-      if (interval) {
-        clearInterval(interval)
-      }
-    }
-  }, [autoRefresh])
-
-  const getLogColor = (log: string) => {
-    if (log.includes('[ERROR]')) return 'text-red-500'
-    if (log.includes('[SUCCESS]')) return 'text-green-500'
-    return 'text-gray-700'
-  }
+  }, [])
 
   return (
-    <main className="container mx-auto p-4 max-w-6xl">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>PowerShell Console Logs</CardTitle>
-          <div className="flex space-x-4">
-            <Button
-              variant={autoRefresh ? "default" : "outline"}
-              onClick={() => setAutoRefresh(!autoRefresh)}
-            >
-              {autoRefresh ? "Auto-Refresh On" : "Auto-Refresh Off"}
-            </Button>
-            <Button variant="outline" onClick={fetchLogs}>
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[600px] rounded-md border p-4">
-            <div className="space-y-1 font-mono text-sm">
-              {logs.map((log, index) => (
-                <div
-                  key={index}
-                  className={`whitespace-pre-wrap ${getLogColor(log)}`}
-                >
-                  {log}
-                </div>
-              ))}
-              {logs.length === 0 && (
-                <div className="text-center text-gray-500">
-                  No logs available
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+    <main className="container mx-auto p-4">
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">System Logs</h1>
+          <Button 
+            onClick={fetchLogs} 
+            disabled={loading}
+          >
+            {loading ? "Refreshing..." : "Refresh Logs"}
+          </Button>
+        </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <Tabs defaultValue="sql" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="sql">SQL Connection Logs</TabsTrigger>
+            <TabsTrigger value="general">General Logs</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="sql">
+            <Card>
+              <CardHeader>
+                <CardTitle>SQL Connection Logs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <pre className="bg-black text-green-400 p-4 rounded-lg overflow-x-auto max-h-[600px] overflow-y-auto">
+                  {sqlLogs.length > 0 ? sqlLogs.join('\n') : 'No SQL logs available'}
+                </pre>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="general">
+            <Card>
+              <CardHeader>
+                <CardTitle>General Logs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <pre className="bg-black text-green-400 p-4 rounded-lg overflow-x-auto max-h-[600px] overflow-y-auto">
+                  {generalLogs.length > 0 ? generalLogs.join('\n') : 'No general logs available'}
+                </pre>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </main>
   )
 }
