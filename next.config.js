@@ -33,15 +33,10 @@ const nextConfig = {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       // Cache module resolution
       cache: true,
-      // Use only exact matches
-      enforceModuleExtension: false,
-    };
-
-    // Add module resolution fallbacks
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
+      fallback: {
+        fs: false,
+        path: false,
+      }
     };
 
     return config;
