@@ -30,6 +30,7 @@ export default function AmazonImportPage() {
   const [supplier, setSupplier] = useState("")
   const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([])
   const [purchasePriceFactor, setPurchasePriceFactor] = useState<number | null>(null)
+  const [overridePurchasePrice, setOverridePurchasePrice] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null)
@@ -170,6 +171,7 @@ export default function AmazonImportPage() {
       const data = await response.json()
       if (data.success) {
         setPurchasePriceFactor(data.factor)
+        setOverridePurchasePrice(false)
         
         if (productPrice) {
           const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
@@ -228,6 +230,7 @@ export default function AmazonImportPage() {
         setPurchasePriceFactor(null)
         setProfitMargin(null)
         setShowPriceInput(false)
+        setOverridePurchasePrice(false)
       } else {
         if (data.csvPath) {
           setCsvPath(data.csvPath)
@@ -355,23 +358,26 @@ export default function AmazonImportPage() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 items-center">
                 <Button 
                   onClick={calculatePurchasePriceFactor}
-                  disabled={!supplier || !productPrice}
+                  disabled={!supplier || !productPrice || overridePurchasePrice}
                   className="flex-1"
                 >
                   Auto-Calculate Purchase Price
                 </Button>
                 <Button
-                  variant="outline"
+                  variant={overridePurchasePrice ? "default" : "outline"}
                   onClick={() => {
-                    setPurchasePrice(null)
-                    setPurchasePriceFactor(null)
+                    setOverridePurchasePrice(!overridePurchasePrice)
+                    if (!overridePurchasePrice) {
+                      setPurchasePrice(null)
+                      setPurchasePriceFactor(null)
+                    }
                   }}
                   className="flex-shrink-0"
                 >
-                  Enter Manually
+                  {overridePurchasePrice ? "Use Calculated" : "Override"}
                 </Button>
               </div>
 
@@ -382,13 +388,14 @@ export default function AmazonImportPage() {
                 step="0.01"
                 value={purchasePrice?.toString() || ""}
                 onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || null)}
-                placeholder="Enter purchase price"
+                placeholder={overridePurchasePrice ? "Enter purchase price" : "Auto-calculated price"}
+                disabled={!overridePurchasePrice && purchasePriceFactor !== null}
               />
             </div>
 
             {(purchasePriceFactor !== null || purchasePrice !== null) && (
               <div className="p-4 bg-muted rounded-md space-y-2">
-                {purchasePriceFactor !== null && (
+                {purchasePriceFactor !== null && !overridePurchasePrice && (
                   <p><strong>Purchase Price Factor:</strong> {purchasePriceFactor.toFixed(2)}</p>
                 )}
                 {profitMargin !== null && (
