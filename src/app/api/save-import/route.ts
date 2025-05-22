@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { writeFile } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import { existsSync } from 'fs'
 
 const execAsync = promisify(exec)
 
@@ -25,19 +26,26 @@ interface ImportRequest {
 }
 
 async function createCsvFile(data: ImportRequest) {
-  // Create imports directory if it doesn't exist
-  const importDir = join(process.cwd(), 'public', 'imports')
-  await writeFile(importDir, '', { flag: 'a' }) // Creates dir if doesn't exist
+  try {
+    // Create imports directory if it doesn't exist
+    const importDir = join(process.cwd(), 'public', 'imports')
+    if (!existsSync(importDir)) {
+      await mkdir(importDir, { recursive: true })
+    }
 
-  const csvContent = [
-    "GTIN,HAN,Artikelname,BruttoVK,NettoVK,UVP,NettoEK,Steuersatz,Lieferant,Bestandsfuehrung",
-    `${data.ean},${data.han},"${data.title}",${data.bruttoPrice.toFixed(2)},${data.nettoPrice.toFixed(2)},${data.bruttoPrice.toFixed(2)},${data.purchasePrice.toFixed(2)},${data.taxRate},"${data.supplier}",Y`
-  ].join('\n')
+    const csvContent = [
+      "GTIN,HAN,Artikelname,BruttoVK,NettoVK,UVP,Steuersatz,NettoEK,Lieferant,Bestandsfuehrung",
+      `${data.ean},${data.han},"${data.title}",${data.bruttoPrice.toFixed(2)},${data.nettoPrice.toFixed(2)},${data.bruttoPrice.toFixed(2)},${data.taxRate},${data.purchasePrice.toFixed(2)},"${data.supplier}",Y`
+    ].join('\n')
 
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-  const csvPath = join(importDir, `import_${timestamp}.csv`)
-  await writeFile(csvPath, csvContent, 'utf-8')
-  return csvPath
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const csvPath = join(importDir, `import_${timestamp}.csv`)
+    await writeFile(csvPath, csvContent, 'utf-8')
+    return csvPath
+  } catch (error) {
+    console.error('Error creating CSV file:', error)
+    throw new Error('Failed to create CSV file')
+  }
 }
 
 async function executeAmeise(csvPath: string, connectionDetails: ImportRequest['connectionDetails']) {
@@ -53,7 +61,9 @@ async function executeAmeise(csvPath: string, connectionDetails: ImportRequest['
   ].join(' ')
 
   try {
-    await execAsync(`"${ameisePath}" ${args}`)
+    const { stdout, stderr } = await execAsync(`"${ameisePath}" ${args}`)
+    console.log('Ameise stdout:', stdout)
+    if (stderr) console.error('Ameise stderr:', stderr)
     return { success: true }
   } catch (error) {
     console.error('Ameise execution error:', error)
@@ -64,12 +74,15 @@ async function executeAmeise(csvPath: string, connectionDetails: ImportRequest['
 export async function POST(req: Request) {
   try {
     const data: ImportRequest = await req.json()
+    console.log('Received import request:', { ...data, connectionDetails: { ...data.connectionDetails, password: '********' } })
 
     // Save CSV file
     const csvPath = await createCsvFile(data)
+    console.log('CSV file created:', csvPath)
 
     // Execute Ameise
     const ameiseResult = await executeAmeise(csvPath, data.connectionDetails)
+    console.log('Ameise execution result:', ameiseResult)
 
     if (!ameiseResult.success) {
       return NextResponse.json({
@@ -88,7 +101,7 @@ export async function POST(req: Request) {
     console.error('Save import error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Failed to save import data'
+      error: error instanceof Error ? error.message : 'Failed to save import data'
     }, { status: 500 })
   }
 }
