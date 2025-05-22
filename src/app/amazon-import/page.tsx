@@ -35,6 +35,7 @@ export default function AmazonImportPage() {
   const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null)
   const [profitMargin, setProfitMargin] = useState<number | null>(null)
   const [csvPath, setCsvPath] = useState<string | null>(null)
+  const [showPriceInput, setShowPriceInput] = useState(false)
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -52,7 +53,6 @@ export default function AmazonImportPage() {
           }
           setMessage({ type: "success", text: "Loaded database connection settings." })
         } else {
-          // Use default connection parameters
           dbConfig = {
             host: "192.168.178.200",
             port: 50815,
@@ -93,14 +93,12 @@ export default function AmazonImportPage() {
   }, [])
 
   useEffect(() => {
-    // Calculate profit margin whenever product price or purchase price changes
     if (productPrice && purchasePrice) {
       const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
       const nettoPrice = productPrice / taxMultiplier
       const margin = ((nettoPrice - purchasePrice) / purchasePrice) * 100
       setProfitMargin(margin)
 
-      // Check for high margin warning
       if (nettoPrice / purchasePrice > 7) {
         setMessage({
           type: "error",
@@ -132,8 +130,14 @@ export default function AmazonImportPage() {
       const data = await response.json()
       if (data.success) {
         setProductTitle(data.product.title)
-        setProductPrice(data.product.price)
-        setMessage({ type: "success", text: "Product info fetched successfully." })
+        if (data.product.price === 0) {
+          setShowPriceInput(true)
+          setMessage({ type: "success", text: "Product found but no price available. Please enter price manually." })
+        } else {
+          setProductPrice(data.product.price)
+          setShowPriceInput(false)
+          setMessage({ type: "success", text: "Product info fetched successfully." })
+        }
         if (taxRate === "7") {
           setHan(ean)
         }
@@ -167,7 +171,6 @@ export default function AmazonImportPage() {
       if (data.success) {
         setPurchasePriceFactor(data.factor)
         
-        // Auto-calculate purchase price
         if (productPrice) {
           const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
           const nettoPrice = productPrice / taxMultiplier
@@ -224,6 +227,7 @@ export default function AmazonImportPage() {
         setSupplier("")
         setPurchasePriceFactor(null)
         setProfitMargin(null)
+        setShowPriceInput(false)
       } else {
         if (data.csvPath) {
           setCsvPath(data.csvPath)
@@ -311,7 +315,21 @@ export default function AmazonImportPage() {
               <div className="space-y-2 p-4 bg-muted rounded-md">
                 <h3 className="font-medium">Product Information</h3>
                 <p><strong>Title:</strong> {productTitle}</p>
-                <p><strong>Price:</strong> {productPrice?.toFixed(2)} €</p>
+                {showPriceInput ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="manual-price">Enter Price (€)</Label>
+                    <Input
+                      id="manual-price"
+                      type="number"
+                      step="0.01"
+                      value={productPrice?.toString() || ""}
+                      onChange={(e) => setProductPrice(parseFloat(e.target.value) || null)}
+                      placeholder="Enter product price"
+                    />
+                  </div>
+                ) : (
+                  <p><strong>Price:</strong> {productPrice?.toFixed(2)} €</p>
+                )}
               </div>
             )}
 
@@ -337,13 +355,25 @@ export default function AmazonImportPage() {
             </div>
 
             <div className="space-y-2">
-              <Button 
-                onClick={calculatePurchasePriceFactor}
-                disabled={!supplier}
-                className="w-full"
-              >
-                Auto-Calculate Purchase Price
-              </Button>
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={calculatePurchasePriceFactor}
+                  disabled={!supplier || !productPrice}
+                  className="flex-1"
+                >
+                  Auto-Calculate Purchase Price
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPurchasePrice(null)
+                    setPurchasePriceFactor(null)
+                  }}
+                  className="flex-shrink-0"
+                >
+                  Enter Manually
+                </Button>
+              </div>
 
               <Label htmlFor="purchase-price">Purchase Price (€)</Label>
               <Input
@@ -384,7 +414,7 @@ export default function AmazonImportPage() {
 
             <Button
               onClick={importArticle}
-              disabled={!productTitle || !han || !supplier || !purchasePrice}
+              disabled={!productTitle || !han || !supplier || !purchasePrice || !productPrice}
               className="w-full"
             >
               Import Article
