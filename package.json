@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 8000",
+    "dev:windows": "set PORT=8000 && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
