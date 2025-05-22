@@ -5,13 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download } from "lucide-react"
+import { Download, Copy, Check } from "lucide-react"
 
 export default function LogsPage() {
   const [generalLogs, setGeneralLogs] = useState<string[]>([])
   const [sqlLogs, setSqlLogs] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [copiedSQL, setCopiedSQL] = useState(false)
+  const [copiedGeneral, setCopiedGeneral] = useState(false)
 
   const fetchLogs = async () => {
     setLoading(true)
@@ -58,6 +60,22 @@ export default function LogsPage() {
     }
   }
 
+  const copyToClipboard = async (text: string, type: 'SQL' | 'GENERAL') => {
+    try {
+      await navigator.clipboard.writeText(text)
+      if (type === 'SQL') {
+        setCopiedSQL(true)
+        setTimeout(() => setCopiedSQL(false), 2000)
+      } else {
+        setCopiedGeneral(true)
+        setTimeout(() => setCopiedGeneral(false), 2000)
+      }
+    } catch (error) {
+      setError('Failed to copy to clipboard')
+      console.error('Error copying to clipboard:', error)
+    }
+  }
+
   useEffect(() => {
     fetchLogs()
   }, [])
@@ -91,15 +109,35 @@ export default function LogsPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>SQL Connection Logs</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadLogs('SQL')}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(sqlLogs.join('\n'), 'SQL')}
+                    className="flex items-center gap-2"
+                  >
+                    {copiedSQL ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadLogs('SQL')}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <pre className="bg-black text-green-400 p-4 rounded-lg overflow-x-auto max-h-[600px] overflow-y-auto">
@@ -113,15 +151,35 @@ export default function LogsPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>General Logs</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadLogs('GENERAL')}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(generalLogs.join('\n'), 'GENERAL')}
+                    className="flex items-center gap-2"
+                  >
+                    {copiedGeneral ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadLogs('GENERAL')}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <pre className="bg-black text-green-400 p-4 rounded-lg overflow-x-auto max-h-[600px] overflow-y-auto">

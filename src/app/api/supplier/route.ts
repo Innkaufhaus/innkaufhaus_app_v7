@@ -16,7 +16,11 @@ interface SupplierRequest {
 export async function POST(req: Request) {
   try {
     const { action, supplier, connectionDetails }: SupplierRequest = await req.json()
-    console.log('Supplier API request:', { action, supplier, connectionDetails })
+    
+    // Enforce the correct password for local SQL connections
+    connectionDetails.password = 'sa04jT14'
+    
+    console.log('Supplier API request:', { action, supplier, ...connectionDetails, password: '********' })
 
     // Ensure database is set explicitly
     if (!connectionDetails.database) {
