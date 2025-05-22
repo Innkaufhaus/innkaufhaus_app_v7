@@ -24,25 +24,42 @@ if (-not (Test-Path (Join-Path $repoPath ".git"))) {
     git pull origin main
 }
 
-# Clean npm cache and node_modules
-Write-Host "Cleaning npm environment..."
+# Clean build artifacts and caches
+Write-Host "Cleaning build artifacts and caches..."
+
 Write-Host "1. Removing node_modules directory..."
 if (Test-Path "node_modules") {
     Remove-Item -Recurse -Force "node_modules"
 }
 
-Write-Host "2. Removing package-lock.json..."
+Write-Host "2. Removing Next.js build artifacts..."
+if (Test-Path ".next") {
+    Remove-Item -Recurse -Force ".next"
+}
+
+Write-Host "3. Removing package-lock.json..."
 if (Test-Path "package-lock.json") {
     Remove-Item -Force "package-lock.json"
 }
 
-Write-Host "3. Cleaning npm cache..."
+Write-Host "4. Cleaning npm cache..."
 npm cache clean --force
 
-Write-Host "4. Clearing npm cache directory..."
+Write-Host "5. Clearing npm cache directory..."
 $npmCachePath = "$env:APPDATA\npm-cache"
 if (Test-Path $npmCachePath) {
     Remove-Item -Recurse -Force $npmCachePath
+}
+
+Write-Host "6. Clearing Next.js cache..."
+if (Test-Path ".next\cache") {
+    Remove-Item -Recurse -Force ".next\cache"
+}
+
+Write-Host "7. Clearing webpack cache..."
+$webpackCachePath = Join-Path $PSScriptRoot ".next\cache\webpack"
+if (Test-Path $webpackCachePath) {
+    Remove-Item -Recurse -Force $webpackCachePath
 }
 
 # Install dependencies
@@ -64,6 +81,9 @@ if (-not (Test-Path $adminSettingsPath)) {
     }
     $defaultSettings | ConvertTo-Json | Set-Content $adminSettingsPath
 }
+
+Write-Host "Building the application..."
+npm run build
 
 Write-Host "Setup complete! Run 'npm run dev' to start the application."
 Write-Host "Setup log has been saved to: $logFile"
