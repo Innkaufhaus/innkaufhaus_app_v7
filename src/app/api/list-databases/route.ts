@@ -5,10 +5,18 @@ export async function POST(req: Request) {
   try {
     const { host, port, user, password } = await req.json()
 
-    // Query to get all databases
+    // Validate required fields
+    if (!host || !port || !user || !password) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required connection parameters' },
+        { status: 400 }
+      );
+    }
+
+    // Query to get all databases (excluding system databases and only including online databases)
     const result = await executeQuery(
       { host, port: Number(port), user, password },
-      'SELECT name FROM master.sys.databases WHERE database_id > 4 AND state = 0'  // Excludes system databases and only includes online databases
+      'SELECT name FROM master.sys.databases WHERE database_id > 4 AND state = 0'
     )
 
     if (result.success && Array.isArray(result.data)) {

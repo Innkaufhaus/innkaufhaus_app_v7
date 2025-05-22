@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Download } from "lucide-react"
 
 export default function LogsPage() {
   const [generalLogs, setGeneralLogs] = useState<string[]>([])
@@ -34,6 +35,26 @@ export default function LogsPage() {
       console.error('Error fetching logs:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const downloadLogs = async (category: string) => {
+    try {
+      const response = await fetch(`/api/download-logs?category=${category}`)
+      if (!response.ok) throw new Error('Failed to download logs')
+      
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${category.toLowerCase()}-logs.txt`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      setError('Failed to download logs')
+      console.error('Error downloading logs:', error)
     }
   }
 
@@ -68,8 +89,17 @@ export default function LogsPage() {
           
           <TabsContent value="sql">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>SQL Connection Logs</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadLogs('SQL')}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
               </CardHeader>
               <CardContent>
                 <pre className="bg-black text-green-400 p-4 rounded-lg overflow-x-auto max-h-[600px] overflow-y-auto">
@@ -81,8 +111,17 @@ export default function LogsPage() {
 
           <TabsContent value="general">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>General Logs</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadLogs('GENERAL')}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
               </CardHeader>
               <CardContent>
                 <pre className="bg-black text-green-400 p-4 rounded-lg overflow-x-auto max-h-[600px] overflow-y-auto">

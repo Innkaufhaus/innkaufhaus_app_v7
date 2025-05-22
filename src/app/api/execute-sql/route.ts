@@ -7,9 +7,9 @@ export async function POST(request: Request) {
     const { host, port, user, password, database, query } = body;
 
     // Validate required fields
-    if (!host || !port || !user || !password || !database || !query) {
+    if (!host || !port || !user || !password || !query) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
@@ -20,17 +20,13 @@ export async function POST(request: Request) {
       query
     );
 
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 500 }
-      );
-    }
-
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'An unknown error occurred' },
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'An unknown error occurred' 
+      },
       { status: 500 }
     );
   }
