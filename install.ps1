@@ -3,10 +3,6 @@
 # Enable TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-Write-Host "Creating application directory..."
-New-Item -ItemType Directory -Force -Path "innkiapp"
-Set-Location "innkiapp"
-
 Write-Host "Downloading setup script..."
 $setupUrl = "https://raw.githubusercontent.com/Innkaufhaus/innkaufhaus_app_v7/main/setup.ps1"
 Invoke-WebRequest -Uri $setupUrl -OutFile "setup.ps1"
