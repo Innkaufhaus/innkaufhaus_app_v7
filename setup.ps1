@@ -14,14 +14,18 @@ if (-not (Test-Path $logsPath)) {
     New-Item -ItemType Directory -Path $logsPath -Force
 }
 
-# Clone the repository if not already cloned
-$repoPath = $PSScriptRoot
-if (-not (Test-Path (Join-Path $repoPath ".git"))) {
-    Write-Host "Cloning repository..."
-    git clone https://github.com/Innkaufhaus/innkaufhaus_app_v7.git .
+# Clone the repository
+Write-Host "Setting up repository..."
+if (-not (Test-Path (Join-Path $PSScriptRoot ".git"))) {
+    Write-Host "Initializing git repository..."
+    git init
+    git remote add origin https://github.com/Innkaufhaus/innkaufhaus_app_v7.git
+    git fetch origin main
+    git reset --hard origin/main
 } else {
-    Write-Host "Repository already exists, pulling latest changes..."
-    git pull origin main
+    Write-Host "Updating existing repository..."
+    git fetch origin main
+    git reset --hard origin/main
 }
 
 # Clean build artifacts and caches
@@ -62,9 +66,17 @@ if (Test-Path $webpackCachePath) {
     Remove-Item -Recurse -Force $webpackCachePath
 }
 
-# Install dependencies
-Write-Host "Installing dependencies..."
-npm install
+# Verify package.json exists after git reset
+if (Test-Path "package.json") {
+    Write-Host "Installing dependencies..."
+    npm install
+
+    Write-Host "Building the application..."
+    npm run build
+} else {
+    Write-Host "Error: package.json not found after repository setup."
+    exit 1
+}
 
 # Create default admin settings if they don't exist
 $adminSettingsPath = Join-Path $PSScriptRoot "public\admin-settings.json"
@@ -81,9 +93,6 @@ if (-not (Test-Path $adminSettingsPath)) {
     }
     $defaultSettings | ConvertTo-Json | Set-Content $adminSettingsPath
 }
-
-Write-Host "Building the application..."
-npm run build
 
 Write-Host "Setup complete! Run 'npm run dev' to start the application."
 Write-Host "Setup log has been saved to: $logFile"
