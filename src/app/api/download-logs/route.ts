@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-export async function GET(request: Request) {
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
+    const category = request.nextUrl.searchParams.get('category');
 
     if (!category) {
       return NextResponse.json({ error: 'Category is required' }, { status: 400 });
@@ -19,13 +20,13 @@ export async function GET(request: Request) {
     }
 
     const logContent = fs.readFileSync(logPath, 'utf-8');
-    const headers = new Headers();
-    headers.set('Content-Type', 'text/plain');
-    headers.set('Content-Disposition', `attachment; filename="${logFileName}"`);
-
+    
     return new NextResponse(logContent, {
       status: 200,
-      headers,
+      headers: {
+        'Content-Type': 'text/plain',
+        'Content-Disposition': `attachment; filename="${logFileName}"`,
+      },
     });
   } catch (error) {
     console.error('Error downloading logs:', error);
