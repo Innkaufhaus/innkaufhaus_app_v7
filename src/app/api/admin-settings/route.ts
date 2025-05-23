@@ -42,18 +42,9 @@ export async function GET() {
       }, { status: 404 })
     }
     
-    // Mask the password in the response
-    const maskedSettings = {
-      ...settings,
-      database: {
-        ...settings.database,
-        password: settings.database.password ? '********' : ''
-      }
-    }
-    
     return NextResponse.json({
       success: true,
-      settings: maskedSettings
+      settings: settings
     })
   } catch (error) {
     console.error('Failed to read settings:', error)
