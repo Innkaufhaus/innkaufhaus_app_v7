@@ -176,7 +176,7 @@ export default function AmazonImportPage() {
         if (productPrice) {
           const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
           const nettoPrice = productPrice / taxMultiplier
-          const calculatedPurchasePrice = nettoPrice / data.factor * 0.9
+          const calculatedPurchasePrice = parseFloat((nettoPrice / data.factor * 0.9).toFixed(2))
           setPurchasePrice(calculatedPurchasePrice)
         }
         
@@ -208,7 +208,7 @@ export default function AmazonImportPage() {
           han,
           bruttoPrice: productPrice,
           nettoPrice,
-          purchasePrice,
+          purchasePrice: purchasePrice ? parseFloat(purchasePrice.toFixed(2)) : purchasePrice,
           supplier,
           taxRate,
           connectionDetails

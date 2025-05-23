@@ -32,3 +32,60 @@
 [2025-05-22T05:22:12.477Z] [INFO] Logger initialized
 [2025-05-22T05:22:12.482Z] [INFO] Logger initialized
 [2025-05-22T05:22:12.629Z] [INFO] Logger initialized
+[2025-05-22T17:12:32.586Z] [INFO] Logger initialized
+[2025-05-22T17:12:32.784Z] [INFO] Logger initialized
+[2025-05-22T17:12:32.789Z] [INFO] Logger initialized
+[2025-05-22T17:12:33.159Z] [INFO] Logger initialized
+[2025-05-22T17:12:46.512Z] [INFO] Attempting SQL Server connection to 192.168.178.200:50815 as sa
+[2025-05-22T17:12:46.513Z] [INFO] Resolving DNS for host: 192.168.178.200
+[2025-05-22T17:12:46.513Z] [INFO] DNS resolved: {"address":"192.168.178.200","family":4}
+[2025-05-22T17:12:46.514Z] [INFO] Establishing database connection...
+[2025-05-22T17:12:46.519Z] [INFO] Attempting SQL Server connection to 192.168.178.200:50815 as sa
+[2025-05-22T17:12:46.519Z] [INFO] Resolving DNS for host: 192.168.178.200
+[2025-05-22T17:12:46.520Z] [INFO] DNS resolved: {"address":"192.168.178.200","family":4}
+[2025-05-22T17:12:46.520Z] [INFO] Establishing database connection...
+[2025-05-22T17:13:01.517Z] [ERROR] Database error: Failed to connect to 192.168.178.200:50815 in 15000ms
+[2025-05-22T17:13:01.518Z] [ERROR] SQL Server error details: code=ETIMEOUT, number=undefined
+[2025-05-22T17:13:01.519Z] [INFO] Database connection closed
+[2025-05-22T17:13:01.521Z] [ERROR] Database error: Failed to connect to 192.168.178.200:50815 in 15000ms
+[2025-05-22T17:13:01.521Z] [ERROR] SQL Server error details: code=ETIMEOUT, number=undefined
+[2025-05-22T17:13:01.521Z] [INFO] Database connection closed
+[2025-05-22T17:13:17.443Z] [INFO] Logger initialized
+[2025-05-22T17:13:17.455Z] [INFO] Logger initialized
+[2025-05-22T17:13:17.455Z] [INFO] Logger initialized
+[2025-05-22T17:13:17.465Z] [INFO] Logger initialized
+[2025-05-23T04:51:02.534Z] [INFO] Attempting SQL Server connection to 192.168.178.200:50815 as sa
+[2025-05-23T04:51:02.537Z] [INFO] Resolving DNS for host: 192.168.178.200
+[2025-05-23T04:51:02.539Z] [INFO] DNS resolved: {"address":"192.168.178.200","family":4}
+[2025-05-23T04:51:02.540Z] [INFO] Establishing database connection...
+[2025-05-23T04:51:02.549Z] [INFO] Attempting SQL Server connection to 192.168.178.200:50815 as sa
+[2025-05-23T04:51:02.550Z] [INFO] Resolving DNS for host: 192.168.178.200
+[2025-05-23T04:51:02.551Z] [INFO] DNS resolved: {"address":"192.168.178.200","family":4}
+[2025-05-23T04:51:02.553Z] [INFO] Establishing database connection...
+[2025-05-23T04:51:17.545Z] [ERROR] Database error: Failed to connect to 192.168.178.200:50815 in 15000ms
+[2025-05-23T04:51:17.546Z] [ERROR] SQL Server error details: code=ETIMEOUT, number=undefined
+[2025-05-23T04:51:17.546Z] [INFO] Database connection closed
+[2025-05-23T04:51:17.554Z] [ERROR] Database error: Failed to connect to 192.168.178.200:50815 in 15000ms
+[2025-05-23T04:51:17.555Z] [ERROR] SQL Server error details: code=ETIMEOUT, number=undefined
+[2025-05-23T04:51:17.555Z] [INFO] Database connection closed
+[2025-05-23T05:33:40.353Z] [INFO] Attempting SQL Server connection to 192.168.178.200:50815 as sa
+[2025-05-23T05:33:40.425Z] [INFO] Attempting SQL Server connection to 192.168.178.200:50815 as sa
+[2025-05-23T05:33:40.449Z] [INFO] Resolving DNS for host: 192.168.178.200
+[2025-05-23T05:33:40.449Z] [INFO] Resolving DNS for host: 192.168.178.200
+[2025-05-23T05:33:40.450Z] [INFO] DNS resolved: {"address":"192.168.178.200","family":4}
+[2025-05-23T05:33:40.450Z] [INFO] DNS resolved: {"address":"192.168.178.200","family":4}
+[2025-05-23T05:33:40.451Z] [INFO] Establishing database connection...
+[2025-05-23T05:33:40.451Z] [INFO] Establishing database connection...
+[2025-05-23T05:33:55.454Z] [ERROR] Database error: Failed to connect to 192.168.178.200:50815 in 15000ms
+[2025-05-23T05:33:55.454Z] [ERROR] Database error: Failed to connect to 192.168.178.200:50815 in 15000ms
+[2025-05-23T05:33:55.455Z] [ERROR] SQL Server error details: code=ETIMEOUT, number=undefined
+[2025-05-23T05:33:55.455Z] [ERROR] SQL Server error details: code=ETIMEOUT, number=undefined
+[2025-05-23T05:33:55.455Z] [INFO] Database connection closed
+[2025-05-23T05:33:55.455Z] [INFO] Database connection closed
+[2025-05-23T06:29:15.811Z] [INFO] Attempting SQL Server connection to 192.168.178.200:50815 as sa
+[2025-05-23T06:29:15.935Z] [INFO] Resolving DNS for host: 192.168.178.200
+[2025-05-23T06:29:15.937Z] [INFO] DNS resolved: {"address":"192.168.178.200","family":4}
+[2025-05-23T06:29:15.937Z] [INFO] Establishing database connection...
+[2025-05-23T06:29:30.947Z] [ERROR] Database error: Failed to connect to 192.168.178.200:50815 in 15000ms
+[2025-05-23T06:29:30.948Z] [ERROR] SQL Server error details: code=ETIMEOUT, number=undefined
+[2025-05-23T06:29:30.948Z] [INFO] Database connection closed

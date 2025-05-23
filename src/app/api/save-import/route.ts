@@ -28,16 +28,17 @@ interface ImportRequest {
 async function createCsvFile(data: ImportRequest) {
   try {
     // Create base directory structure
-    const baseDir = process.env.NODE_ENV === 'production' ? 'C:\\NODE' : process.cwd()
-    const publicDir = join(baseDir, 'public')
-    const importDir = join(publicDir, 'imports')
+    const baseDir = process.env.NODE_ENV === 'production' ? 'C:\\JTL-Imports' : process.cwd()
+    const importDir = join(baseDir, 'imports')
 
     // Create directories if they don't exist
-    if (!existsSync(publicDir)) {
-      await mkdir(publicDir, { recursive: true })
+    if (!existsSync(baseDir)) {
+      await mkdir(baseDir, { recursive: true })
+      console.log('Created base directory:', baseDir)
     }
     if (!existsSync(importDir)) {
       await mkdir(importDir, { recursive: true })
+      console.log('Created imports directory:', importDir)
     }
 
     const csvContent = [
