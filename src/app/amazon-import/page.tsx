@@ -65,7 +65,7 @@ export default function AmazonImportPage() {
           port: parseInt(data.settings.database.port),
           user: data.settings.database.user,
           password: data.settings.database.password,
-          database: "JTL" // Default JTL database
+          database: "eazybusiness" // Changed from JTL to eazybusiness
         }
         setConnectionDetails(dbConfig)
         
@@ -170,7 +170,7 @@ export default function AmazonImportPage() {
       // If EAN doesn't exist, proceed with Amazon search
       await fetchProductFromAmazon()
     } catch (error) {
-      setMessage({ type: "error", text: "Failed to check EAN in database." })
+      setMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to check EAN in database." })
       setLoading(false)
     }
   }

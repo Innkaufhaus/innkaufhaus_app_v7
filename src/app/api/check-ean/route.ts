@@ -22,7 +22,7 @@ export async function POST(req: Request) {
         port: parseInt(connectionDetails.port.toString()),
         user: connectionDetails.user,
         password: connectionDetails.password,
-        database: connectionDetails.database || 'JTL'
+        database: 'eazybusiness' // Use eazybusiness instead of JTL
       },
       `SELECT cBarcode FROM tArtikel WHERE cBarcode = '${ean}'`
     )
