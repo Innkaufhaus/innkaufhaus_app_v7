@@ -27,8 +27,15 @@ interface ImportRequest {
 
 async function createCsvFile(data: ImportRequest) {
   try {
-    // Create imports directory if it doesn't exist
-    const importDir = join(process.cwd(), 'public', 'imports')
+    // Create base directory structure
+    const baseDir = process.env.NODE_ENV === 'production' ? 'C:\\NODE' : process.cwd()
+    const publicDir = join(baseDir, 'public')
+    const importDir = join(publicDir, 'imports')
+
+    // Create directories if they don't exist
+    if (!existsSync(publicDir)) {
+      await mkdir(publicDir, { recursive: true })
+    }
     if (!existsSync(importDir)) {
       await mkdir(importDir, { recursive: true })
     }
@@ -40,6 +47,8 @@ async function createCsvFile(data: ImportRequest) {
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const csvPath = join(importDir, `import_${timestamp}.csv`)
+    
+    console.log('Writing CSV to:', csvPath)
     await writeFile(csvPath, csvContent, 'utf-8')
     return csvPath
   } catch (error) {
