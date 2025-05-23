@@ -53,13 +53,19 @@ export default function AmazonImportPage() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        // Mock data for testing
+        const response = await fetch('/api/admin-settings')
+        const data = await response.json()
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load settings')
+        }
+
         const dbConfig = {
-          host: "localhost",
-          port: 1433,
-          user: "test",
-          password: "test",
-          database: "test"
+          host: data.settings.database.host,
+          port: parseInt(data.settings.database.port),
+          user: data.settings.database.user,
+          password: data.settings.database.password,
+          database: "JTL" // Default JTL database
         }
         setConnectionDetails(dbConfig)
         
