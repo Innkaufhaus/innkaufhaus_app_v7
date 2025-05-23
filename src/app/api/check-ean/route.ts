@@ -7,6 +7,15 @@ export async function POST(req: Request) {
   try {
     const { ean, connectionDetails } = await req.json()
 
+    // Debug log
+    console.log('Received connection details:', {
+      host: connectionDetails.host,
+      port: connectionDetails.port,
+      user: connectionDetails.user,
+      database: connectionDetails.database,
+      password: connectionDetails.password?.slice(0, 2) + '***' // Log first 2 chars only
+    })
+
     if (!connectionDetails?.host || !connectionDetails?.port || !connectionDetails?.user || !connectionDetails?.password) {
       return NextResponse.json({
         success: false,
@@ -17,8 +26,8 @@ export async function POST(req: Request) {
     const config = {
       user: connectionDetails.user,
       password: connectionDetails.password,
-      server: connectionDetails.host,
-      port: connectionDetails.port,
+      server: connectionDetails.host, // Use host as server
+      port: parseInt(connectionDetails.port), // Ensure port is a number
       database: connectionDetails.database || 'JTL',
       options: {
         encrypt: true,
@@ -26,6 +35,12 @@ export async function POST(req: Request) {
         connectTimeout: 30000
       }
     }
+
+    // Debug log
+    console.log('Using SQL config:', {
+      ...config,
+      password: config.password?.slice(0, 2) + '***' // Log first 2 chars only
+    })
 
     pool = await sql.connect(config)
     const result = await pool.request()
