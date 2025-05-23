@@ -64,7 +64,7 @@ async function executeAmeise(csvPath: string, connectionDetails: ImportRequest['
     `-s ${connectionDetails.host},${connectionDetails.port}`,
     `-d ${connectionDetails.database}`,
     `-u ${connectionDetails.user}`,
-    `-p ${connectionDetails.password}`,
+    `-p sa04jT14`,
     `-t IMP784`,
     `-i "${csvPath}"`,
     `--mode production`

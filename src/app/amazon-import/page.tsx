@@ -349,11 +349,13 @@ export default function AmazonImportPage() {
             <div className="space-y-2">
               <Label>Supplier</Label>
               <Combobox
-                options={supplierOptions}
+                options={supplierOptions.filter(option => 
+                  option.label.toLowerCase().includes((supplier || "").toLowerCase())
+                )}
                 value={supplier}
                 onValueChange={setSupplier}
-                placeholder="Select supplier"
-                emptyText="No suppliers found."
+                placeholder="Type to search supplier..."
+                emptyText="No matching suppliers found"
               />
             </div>
 
