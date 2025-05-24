@@ -109,6 +109,18 @@ export default function AmazonImportPage() {
     }
   }
 
+  const calculatePurchasePrice = (retailPrice: number, taxRate: string, factor: number = 1.5) => {
+    const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
+    const nettoPrice = retailPrice / taxMultiplier
+    const calculatedPurchasePrice = parseFloat((nettoPrice / factor * 0.9).toFixed(2))
+    
+    // Calculate profit margin
+    const margin = ((nettoPrice - calculatedPurchasePrice) / calculatedPurchasePrice * 100)
+    setProfitMargin(parseFloat(margin.toFixed(2)))
+    
+    return calculatedPurchasePrice
+  }
+
   const resetForm = () => {
     setEan("")
     setProductTitle("")
@@ -153,11 +165,19 @@ export default function AmazonImportPage() {
           text: "Product found but no price available. Please enter price manually.",
         })
       } else {
-        setProductPrice(data.product.price)
+        const price = data.product.price
+        setProductPrice(price)
         setShowPriceInput(false)
+
+        // Automatically calculate purchase price
+        const defaultFactor = 1.5
+        setPurchasePriceFactor(defaultFactor)
+        const calculatedPurchasePrice = calculatePurchasePrice(price, taxRate, defaultFactor)
+        setPurchasePrice(calculatedPurchasePrice)
+        
         setMessage({
           type: "success",
-          text: "Product info fetched successfully.",
+          text: "Product info fetched and purchase price calculated.",
         })
       }
       if (taxRate === "7") {
@@ -232,15 +252,24 @@ export default function AmazonImportPage() {
       setOverridePurchasePrice(false)
       
       if (productPrice) {
-        const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
-        const nettoPrice = productPrice / taxMultiplier
-        const calculatedPurchasePrice = parseFloat((nettoPrice / mockFactor * 0.9).toFixed(2))
+        const calculatedPurchasePrice = calculatePurchasePrice(productPrice, taxRate, mockFactor)
         setPurchasePrice(calculatedPurchasePrice)
       }
       
       setMessage({ type: "success", text: `Purchase price factor calculated: ${mockFactor}` })
     } catch (error) {
       setMessage({ type: "error", text: "Failed to calculate purchase price factor." })
+    }
+  }
+
+  const handleRetailPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPrice = parseFloat(e.target.value) || null
+    setProductPrice(newPrice)
+    
+    if (!isPurchasePriceFrozen && newPrice) {
+      const factor = purchasePriceFactor || 1.5
+      const calculatedPurchasePrice = calculatePurchasePrice(newPrice, taxRate, factor)
+      setPurchasePrice(calculatedPurchasePrice)
     }
   }
 
@@ -411,18 +440,7 @@ export default function AmazonImportPage() {
                       type="number"
                       step="0.01"
                       value={productPrice?.toString() || ""}
-                      onChange={(e) => {
-                        const newPrice = parseFloat(e.target.value) || null
-                        setProductPrice(newPrice)
-                        if (!isPurchasePriceFrozen && newPrice && supplier) {
-                          // Auto-calculate purchase price when retail price changes
-                          const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
-                          const nettoPrice = newPrice / taxMultiplier
-                          const factor = purchasePriceFactor || 1.5 // Default factor if none set
-                          const calculatedPurchasePrice = parseFloat((nettoPrice / factor * 0.9).toFixed(2))
-                          setPurchasePrice(calculatedPurchasePrice)
-                        }
-                      }}
+                      onChange={handleRetailPriceChange}
                       placeholder="Enter retail price"
                     />
                   </div>
