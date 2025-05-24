@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,6 +29,14 @@ interface ConnectionDetails {
   database: string
 }
 
+interface Supplier {
+  value: string
+  label: string
+  company: string
+  contact: string | null
+  supplierNumber: string | null
+}
+
 export default function AmazonImportPage() {
   const router = useRouter()
   const [ean, setEan] = useState("")
@@ -38,7 +46,8 @@ export default function AmazonImportPage() {
   const [purchasePrice, setPurchasePrice] = useState<number | null>(null)
   const [han, setHan] = useState("")
   const [supplier, setSupplier] = useState("")
-  const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([])
+  const [supplierSearch, setSupplierSearch] = useState("")
+  const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([])
   const [purchasePriceFactor, setPurchasePriceFactor] = useState<number | null>(null)
   const [overridePurchasePrice, setOverridePurchasePrice] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -65,23 +74,13 @@ export default function AmazonImportPage() {
           port: parseInt(data.settings.database.port),
           user: data.settings.database.user,
           password: data.settings.database.password,
-          database: "eazybusiness" // Changed from JTL to eazybusiness
+          database: "eazybusiness"
         }
         setConnectionDetails(dbConfig)
         
-        // Mock supplier options
-        const mockSuppliers = [
-          "Supplier A",
-          "Supplier B",
-          "Supplier C"
-        ]
-        setSupplierOptions(
-          mockSuppliers.map(s => ({ 
-            value: s, 
-            label: s 
-          }))
-        )
-        setMessage({ type: "success", text: "Loaded test settings." })
+        // Initial supplier search
+        searchSuppliers("")
+        
       } catch (error) {
         console.error('Failed to load connection settings:', error)
         setMessage({
@@ -92,6 +91,44 @@ export default function AmazonImportPage() {
     }
     loadSettings()
   }, [])
+
+  const searchSuppliers = useCallback(async (search: string) => {
+    if (!connectionDetails) return
+
+    try {
+      const response = await fetch("/api/supplier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          search,
+          connectionDetails 
+        })
+      })
+
+      const data = await response.json()
+      
+      if (!data.success) {
+        throw new Error(data.error || "Failed to fetch suppliers")
+      }
+
+      setSupplierOptions(data.suppliers)
+    } catch (error) {
+      console.error('Failed to fetch suppliers:', error)
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to fetch suppliers"
+      })
+    }
+  }, [connectionDetails])
+
+  // Debounced supplier search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchSuppliers(supplierSearch)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [supplierSearch, searchSuppliers])
 
   useEffect(() => {
     if (productPrice && purchasePrice) {
@@ -122,6 +159,7 @@ export default function AmazonImportPage() {
     setPurchasePrice(null)
     setHan("")
     setSupplier("")
+    setSupplierSearch("")
     setPurchasePriceFactor(null)
     setProfitMargin(null)
     setShowPriceInput(false)
@@ -415,13 +453,17 @@ export default function AmazonImportPage() {
 
             <div className="space-y-2">
               <Label>Supplier</Label>
+              <Input
+                value={supplierSearch}
+                onChange={(e) => setSupplierSearch(e.target.value)}
+                placeholder="Search suppliers..."
+                className="mb-2"
+              />
               <Combobox
-                options={supplierOptions.filter(option => 
-                  option.label.toLowerCase().includes((supplier || "").toLowerCase())
-                )}
+                options={supplierOptions}
                 value={supplier}
                 onValueChange={setSupplier}
-                placeholder="Type to search supplier..."
+                placeholder="Select a supplier..."
                 emptyText="No matching suppliers found"
               />
             </div>
