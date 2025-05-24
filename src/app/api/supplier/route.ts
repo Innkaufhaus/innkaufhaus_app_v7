@@ -17,18 +17,18 @@ export async function POST(req: Request) {
     const query = `
       SELECT TOP 5
         kLieferant as id,
-        cFirma as company,
+        cName as company,
         cAnsprechpartner as contact,
-        cLieferantennummer as supplierNumber
+        cLiefNr as supplierNumber
       FROM tLieferant 
-      WHERE cFirma LIKE '%${search}%'
+      WHERE cName LIKE '%${search}%'
       ORDER BY 
         CASE 
-          WHEN cFirma LIKE '${search}%' THEN 1  -- Exact start match
-          WHEN cFirma LIKE '% ${search}%' THEN 2  -- Word start match
+          WHEN cName LIKE '${search}%' THEN 1  -- Exact start match
+          WHEN cName LIKE '% ${search}%' THEN 2  -- Word start match
           ELSE 3  -- Contains match
         END,
-        cFirma
+        cName
     `
 
     const result = await executeQuery(
