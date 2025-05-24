@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 // Simple in-memory cache
-const cache = new Map<string, { data: any; timestamp: number }>()
+export const cache = new Map<string, { data: any; timestamp: number }>()
 const CACHE_DURATION = 1000 * 60 * 60 * 24 // 24 hours
 
 interface AmazonSearchResponse {

@@ -49,6 +49,7 @@ export default function AmazonImportPage() {
   const [csvPath, setCsvPath] = useState<string | null>(null)
   const [showPriceInput, setShowPriceInput] = useState(false)
   const [showExistsDialog, setShowExistsDialog] = useState(false)
+  const [clearingCache, setClearingCache] = useState(false)
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -294,6 +295,33 @@ export default function AmazonImportPage() {
     }
   }
 
+  const clearCache = async () => {
+    try {
+      setClearingCache(true)
+      const response = await fetch("/api/clear-cache", {
+        method: "POST"
+      })
+      const data = await response.json()
+      
+      if (!data.success) {
+        throw new Error(data.error || "Failed to clear cache")
+      }
+
+      setMessage({
+        type: "success",
+        text: "Cache cleared successfully"
+      })
+    } catch (error) {
+      console.error('Failed to clear cache:', error)
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to clear cache"
+      })
+    } finally {
+      setClearingCache(false)
+    }
+  }
+
   if (!connectionDetails) {
     return (
       <div className="container mx-auto p-4">
@@ -319,9 +347,18 @@ export default function AmazonImportPage() {
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
             <span>Amazon Article Import</span>
-            <Button variant="outline" asChild>
-              <Link href="/amazon-import/batch">Batch Import</Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={clearCache}
+                disabled={clearingCache}
+              >
+                {clearingCache ? "Clearing..." : "Clear Cache"}
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/amazon-import/batch">Batch Import</Link>
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
