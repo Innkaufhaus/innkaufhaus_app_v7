@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,7 +39,6 @@ export default function AmazonImportPage() {
   const [han, setHan] = useState("")
   const [supplier, setSupplier] = useState("")
   const [allSuppliers, setAllSuppliers] = useState<Array<{ value: string; label: string }>>([])
-  const [supplierSearch, setSupplierSearch] = useState("")
   const [purchasePriceFactor, setPurchasePriceFactor] = useState<number | null>(null)
   const [overridePurchasePrice, setOverridePurchasePrice] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -109,39 +108,6 @@ export default function AmazonImportPage() {
     }
   }
 
-  // Filter suppliers based on search input
-  const filteredSuppliers = useMemo(() => {
-    if (!supplierSearch) return allSuppliers.slice(0, 5)
-    
-    return allSuppliers
-      .filter(supplier => 
-        supplier.label.toLowerCase().includes(supplierSearch.toLowerCase())
-      )
-      .slice(0, 5)
-  }, [allSuppliers, supplierSearch])
-
-  useEffect(() => {
-    if (productPrice && purchasePrice) {
-      const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
-      const nettoPrice = productPrice / taxMultiplier
-      const margin = ((nettoPrice - purchasePrice) / purchasePrice) * 100
-      setProfitMargin(margin)
-
-      if (nettoPrice / purchasePrice > 7) {
-        setMessage({
-          type: "error",
-          text: "Warning: Price/Purchase price ratio is above factor 7!"
-        })
-      }
-    } else {
-      setProfitMargin(null)
-    }
-  }, [productPrice, purchasePrice, taxRate])
-
-  const validateEan = (ean: string) => {
-    return /^\d{13}$/.test(ean)
-  }
-
   const resetForm = () => {
     setEan("")
     setProductTitle("")
@@ -149,13 +115,58 @@ export default function AmazonImportPage() {
     setPurchasePrice(null)
     setHan("")
     setSupplier("")
-    setSupplierSearch("")
     setPurchasePriceFactor(null)
     setProfitMargin(null)
     setShowPriceInput(false)
     setOverridePurchasePrice(false)
     setIsPurchasePriceFrozen(false)
     setMessage(null)
+  }
+
+  const fetchProductFromAmazon = async () => {
+    try {
+      const response = await fetch("/api/amazon-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ean }),
+      })
+      const data = await response.json()
+      if (!data.success) {
+        if (data.error === "No product found") {
+          setMessage({
+            type: "error",
+            text: "Oxylabs API returned no product. Please verify the EAN or try again later.",
+          })
+        } else {
+          setMessage({ type: "error", text: data.error || "Product not found." })
+        }
+        setLoading(false)
+        return
+      }
+
+      setProductTitle(data.product.title)
+      if (data.product.price === 0) {
+        setShowPriceInput(true)
+        setMessage({
+          type: "success",
+          text: "Product found but no price available. Please enter price manually.",
+        })
+      } else {
+        setProductPrice(data.product.price)
+        setShowPriceInput(false)
+        setMessage({
+          type: "success",
+          text: "Product info fetched successfully.",
+        })
+      }
+      if (taxRate === "7") {
+        setHan(ean)
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: "Failed to fetch product info." })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const checkAndFetchProduct = async () => {
@@ -203,50 +214,8 @@ export default function AmazonImportPage() {
     }
   }
 
-  const fetchProductFromAmazon = async () => {
-    try {
-      const response = await fetch("/api/amazon-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ean }),
-      })
-      const data = await response.json()
-      if (!data.success) {
-        if (data.error === "No product found") {
-          setMessage({
-            type: "error",
-            text: "Oxylabs API returned no product. Please verify the EAN or try again later.",
-          })
-        } else {
-          setMessage({ type: "error", text: data.error || "Product not found." })
-        }
-        setLoading(false)
-        return
-      }
-
-      setProductTitle(data.product.title)
-      if (data.product.price === 0) {
-        setShowPriceInput(true)
-        setMessage({
-          type: "success",
-          text: "Product found but no price available. Please enter price manually.",
-        })
-      } else {
-        setProductPrice(data.product.price)
-        setShowPriceInput(false)
-        setMessage({
-          type: "success",
-          text: "Product info fetched successfully.",
-        })
-      }
-      if (taxRate === "7") {
-        setHan(ean)
-      }
-    } catch (error) {
-      setMessage({ type: "error", text: "Failed to fetch product info." })
-    } finally {
-      setLoading(false)
-    }
+  const validateEan = (ean: string) => {
+    return /^\d{13}$/.test(ean)
   }
 
   const calculatePurchasePriceFactor = async () => {
@@ -443,17 +412,11 @@ export default function AmazonImportPage() {
 
             <div className="space-y-2">
               <Label>Supplier</Label>
-              <Input
-                value={supplierSearch}
-                onChange={(e) => setSupplierSearch(e.target.value)}
-                placeholder="Search suppliers..."
-                className="mb-2"
-              />
               <Combobox
-                options={filteredSuppliers}
+                options={allSuppliers}
                 value={supplier}
                 onValueChange={setSupplier}
-                placeholder="Select a supplier..."
+                placeholder="Search and select supplier..."
                 emptyText="No matching suppliers found"
               />
             </div>
