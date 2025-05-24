@@ -17,18 +17,16 @@ export async function POST(req: Request) {
     const query = `
       SELECT TOP 5
         kLieferant as id,
-        cName as company,
-        cAnsprechpartner as contact,
-        cLiefNr as supplierNumber
+        cFirma as company
       FROM tLieferant 
-      WHERE cName LIKE '%${search}%'
+      WHERE tLieferant.cFirma LIKE '%${search}%'
       ORDER BY 
         CASE 
-          WHEN cName LIKE '${search}%' THEN 1  -- Exact start match
-          WHEN cName LIKE '% ${search}%' THEN 2  -- Word start match
+          WHEN cFirma LIKE '${search}%' THEN 1  -- Exact start match
+          WHEN cFirma LIKE '% ${search}%' THEN 2  -- Word start match
           ELSE 3  -- Contains match
         END,
-        cName
+        cFirma
     `
 
     const result = await executeQuery(
@@ -49,10 +47,7 @@ export async function POST(req: Request) {
     // Transform the data into the format expected by the Combobox component
     const suppliers = Array.isArray(result.data) ? result.data.map(supplier => ({
       value: supplier.id.toString(),
-      label: `${supplier.company} (${supplier.supplierNumber || 'No ID'})`,
-      company: supplier.company,
-      contact: supplier.contact,
-      supplierNumber: supplier.supplierNumber
+      label: supplier.company
     })) : []
 
     return NextResponse.json({
