@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,14 +29,6 @@ interface ConnectionDetails {
   database: string
 }
 
-interface Supplier {
-  value: string
-  label: string
-  company: string
-  contact: string | null
-  supplierNumber: string | null
-}
-
 export default function AmazonImportPage() {
   const router = useRouter()
   const [ean, setEan] = useState("")
@@ -46,8 +38,8 @@ export default function AmazonImportPage() {
   const [purchasePrice, setPurchasePrice] = useState<number | null>(null)
   const [han, setHan] = useState("")
   const [supplier, setSupplier] = useState("")
+  const [allSuppliers, setAllSuppliers] = useState<Array<{ value: string; label: string }>>([])
   const [supplierSearch, setSupplierSearch] = useState("")
-  const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([])
   const [purchasePriceFactor, setPurchasePriceFactor] = useState<number | null>(null)
   const [overridePurchasePrice, setOverridePurchasePrice] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -78,8 +70,8 @@ export default function AmazonImportPage() {
         }
         setConnectionDetails(dbConfig)
         
-        // Initial supplier search
-        searchSuppliers("")
+        // Load all suppliers
+        await loadSuppliers(dbConfig)
         
       } catch (error) {
         console.error('Failed to load connection settings:', error)
@@ -92,17 +84,12 @@ export default function AmazonImportPage() {
     loadSettings()
   }, [])
 
-  const searchSuppliers = useCallback(async (search: string) => {
-    if (!connectionDetails) return
-
+  const loadSuppliers = async (dbConfig: ConnectionDetails) => {
     try {
       const response = await fetch("/api/supplier", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          search,
-          connectionDetails 
-        })
+        body: JSON.stringify({ connectionDetails: dbConfig })
       })
 
       const data = await response.json()
@@ -111,7 +98,8 @@ export default function AmazonImportPage() {
         throw new Error(data.error || "Failed to fetch suppliers")
       }
 
-      setSupplierOptions(data.suppliers)
+      console.log('Loaded suppliers:', data.suppliers)
+      setAllSuppliers(data.suppliers)
     } catch (error) {
       console.error('Failed to fetch suppliers:', error)
       setMessage({
@@ -119,16 +107,18 @@ export default function AmazonImportPage() {
         text: error instanceof Error ? error.message : "Failed to fetch suppliers"
       })
     }
-  }, [connectionDetails])
+  }
 
-  // Debounced supplier search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      searchSuppliers(supplierSearch)
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [supplierSearch, searchSuppliers])
+  // Filter suppliers based on search input
+  const filteredSuppliers = useMemo(() => {
+    if (!supplierSearch) return allSuppliers.slice(0, 5)
+    
+    return allSuppliers
+      .filter(supplier => 
+        supplier.label.toLowerCase().includes(supplierSearch.toLowerCase())
+      )
+      .slice(0, 5)
+  }, [allSuppliers, supplierSearch])
 
   useEffect(() => {
     if (productPrice && purchasePrice) {
@@ -460,7 +450,7 @@ export default function AmazonImportPage() {
                 className="mb-2"
               />
               <Combobox
-                options={supplierOptions}
+                options={filteredSuppliers}
                 value={supplier}
                 onValueChange={setSupplier}
                 placeholder="Select a supplier..."

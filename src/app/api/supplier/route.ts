@@ -4,7 +4,7 @@ import { Logger } from '../../../lib/logger'
 
 export async function POST(req: Request) {
   try {
-    const { search, connectionDetails } = await req.json()
+    const { connectionDetails } = await req.json()
 
     if (!connectionDetails?.host || !connectionDetails?.port || !connectionDetails?.user || !connectionDetails?.password) {
       return NextResponse.json({
@@ -13,20 +13,13 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
-    // Query to search suppliers by company name, limited to top 5 matches
+    // Query to get all suppliers
     const query = `
-      SELECT TOP 5
+      SELECT 
         kLieferant as id,
         cFirma as company
       FROM tLieferant 
-      WHERE tLieferant.cFirma LIKE '%${search}%'
-      ORDER BY 
-        CASE 
-          WHEN cFirma LIKE '${search}%' THEN 1  -- Exact start match
-          WHEN cFirma LIKE '% ${search}%' THEN 2  -- Word start match
-          ELSE 3  -- Contains match
-        END,
-        cFirma
+      ORDER BY cFirma
     `
 
     const result = await executeQuery(
@@ -42,6 +35,12 @@ export async function POST(req: Request) {
 
     if (!result.success) {
       throw new Error(result.error)
+    }
+
+    // Log all suppliers to console
+    await Logger.log(`Found ${result.data?.length || 0} suppliers`, 'INFO')
+    if (Array.isArray(result.data) && result.data.length > 0) {
+      await Logger.log('First 5 suppliers: ' + JSON.stringify(result.data.slice(0, 5)), 'INFO')
     }
 
     // Transform the data into the format expected by the Combobox component
