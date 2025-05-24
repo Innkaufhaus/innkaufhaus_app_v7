@@ -244,24 +244,53 @@ export default function AmazonImportPage() {
   }
 
   const importArticle = async () => {
-    if (!productPrice || !purchasePrice) {
+    if (!productPrice || !purchasePrice || !connectionDetails) {
       setMessage({ type: "error", text: "Missing required information." })
       return
     }
 
     try {
-      // Mock successful import
-      const mockCsvPath = "/imports/mock-import.csv"
-      setCsvPath(mockCsvPath)
+      const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
+      const nettoPrice = productPrice / taxMultiplier
+
+      const importData = {
+        ean,
+        title: productTitle,
+        han,
+        bruttoPrice: productPrice,
+        nettoPrice,
+        purchasePrice,
+        supplier: allSuppliers.find(s => s.value === supplier)?.label || '',
+        taxRate: taxRate as "7" | "19",
+        connectionDetails
+      }
+
+      const response = await fetch("/api/save-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(importData)
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to import article")
+      }
+
+      setCsvPath(data.csvPath)
       setMessage({ 
         type: "success", 
-        text: `Article imported successfully! CSV saved at: ${mockCsvPath}` 
+        text: `Article imported successfully! CSV saved at: ${data.csvPath}` 
       })
       
       // Reset form
       resetForm()
     } catch (error) {
-      setMessage({ type: "error", text: "Failed to import article" })
+      console.error('Import error:', error)
+      setMessage({ 
+        type: "error", 
+        text: error instanceof Error ? error.message : "Failed to import article" 
+      })
     }
   }
 
