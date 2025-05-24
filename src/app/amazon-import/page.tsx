@@ -1,55 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { useRouter } from "next/navigation"
-import { Combobox } from "@/components/ui/combobox"
-import Link from "next/link"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-
-interface ConnectionDetails {
-  host: string
-  port: number
-  user: string
-  password: string
-  database: string
-}
+// ... (keep all imports)
 
 export default function AmazonImportPage() {
-  const router = useRouter()
-  const [ean, setEan] = useState("")
-  const [taxRate, setTaxRate] = useState("19")
-  const [productTitle, setProductTitle] = useState("")
-  const [productPrice, setProductPrice] = useState<number | null>(null)
-  const [purchasePrice, setPurchasePrice] = useState<number | null>(null)
-  const [han, setHan] = useState("")
-  const [supplier, setSupplier] = useState("")
-  const [allSuppliers, setAllSuppliers] = useState<Array<{ value: string; label: string }>>([])
-  const [purchasePriceFactor, setPurchasePriceFactor] = useState<number | null>(null)
-  const [overridePurchasePrice, setOverridePurchasePrice] = useState(false)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null)
-  const [isPurchasePriceFrozen, setIsPurchasePriceFrozen] = useState<boolean>(false)
-  const [profitMargin, setProfitMargin] = useState<number | null>(null)
-  const [csvPath, setCsvPath] = useState<string | null>(null)
-  const [showPriceInput, setShowPriceInput] = useState(false)
-  const [showExistsDialog, setShowExistsDialog] = useState(false)
-  const [clearingCache, setClearingCache] = useState(false)
+  // ... (keep all state variables)
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -70,7 +24,6 @@ export default function AmazonImportPage() {
         }
         setConnectionDetails(dbConfig)
         
-        // Load all suppliers
         await loadSuppliers(dbConfig)
         
       } catch (error) {
@@ -114,7 +67,6 @@ export default function AmazonImportPage() {
     const nettoPrice = retailPrice / taxMultiplier
     const calculatedPurchasePrice = parseFloat((nettoPrice / factor * 0.9).toFixed(2))
     
-    // Calculate profit margin
     const margin = ((nettoPrice - calculatedPurchasePrice) / calculatedPurchasePrice * 100)
     setProfitMargin(parseFloat(margin.toFixed(2)))
     
@@ -134,6 +86,10 @@ export default function AmazonImportPage() {
     setOverridePurchasePrice(false)
     setIsPurchasePriceFrozen(false)
     setMessage(null)
+  }
+
+  const validateEan = (ean: string) => {
+    return /^\d{13}$/.test(ean)
   }
 
   const fetchProductFromAmazon = async () => {
@@ -205,7 +161,6 @@ export default function AmazonImportPage() {
     setMessage(null)
 
     try {
-      // First check if EAN exists in database
       const checkResponse = await fetch("/api/check-ean", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -227,16 +182,11 @@ export default function AmazonImportPage() {
         return
       }
 
-      // If EAN doesn't exist, proceed with Amazon search
       await fetchProductFromAmazon()
     } catch (error) {
       setMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to check EAN in database." })
       setLoading(false)
     }
-  }
-
-  const validateEan = (ean: string) => {
-    return /^\d{13}$/.test(ean)
   }
 
   const calculatePurchasePriceFactor = async () => {
@@ -246,8 +196,7 @@ export default function AmazonImportPage() {
     }
 
     try {
-      // Mock purchase price calculation
-      const mockFactor = 1.5 // Example factor
+      const mockFactor = 1.5
       setPurchasePriceFactor(mockFactor)
       setOverridePurchasePrice(false)
       
@@ -313,7 +262,6 @@ export default function AmazonImportPage() {
         text: `Article imported successfully! CSV saved at: ${data.csvPath}` 
       })
       
-      // Reset form
       resetForm()
     } catch (error) {
       console.error('Import error:', error)
@@ -351,243 +299,26 @@ export default function AmazonImportPage() {
     }
   }
 
-  if (!connectionDetails) {
-    return (
-      <div className="container mx-auto p-4">
-        <Alert>
-          <AlertDescription>
-            Please configure database connection settings in{" "}
-            <Button
-              variant="link"
-              className="p-0 h-auto font-normal"
-              onClick={() => router.push("/admin")}
-            >
-              Admin Settings
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
+  const handleTitleEdit = () => {
+    setEditedTitle(productTitle)
+    setIsEditingTitle(true)
   }
 
-  return (
-    <main className="container mx-auto p-4 max-w-4xl">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>Amazon Article Import</span>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={clearCache}
-                disabled={clearingCache}
-              >
-                {clearingCache ? "Clearing..." : "Clear Cache"}
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/amazon-import/batch">Batch Import</Link>
-              </Button>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="ean">EAN (13 digits)</Label>
-              <div className="flex space-x-2">
-                <Input
-                  id="ean"
-                  value={ean}
-                  onChange={(e) => setEan(e.target.value)}
-                  maxLength={13}
-                  placeholder="Enter 13-digit EAN"
-                  className="flex-1"
-                />
-                <Button onClick={checkAndFetchProduct} disabled={loading || !validateEan(ean)}>
-                  {loading ? "Fetching..." : "Fetch Info"}
-                </Button>
-              </div>
-            </div>
+  const handleTitleSave = () => {
+    if (editedTitle.trim()) {
+      setProductTitle(editedTitle.trim())
+      setMessage({
+        type: "success",
+        text: "Product title updated successfully."
+      })
+    }
+    setIsEditingTitle(false)
+  }
 
-            <div className="space-y-2">
-              <Label>Tax Rate</Label>
-              <RadioGroup
-                value={taxRate}
-                onValueChange={setTaxRate}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="19" id="tax-19" />
-                  <Label htmlFor="tax-19">19%</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="7" id="tax-7" />
-                  <Label htmlFor="tax-7">7%</Label>
-                </div>
-              </RadioGroup>
-            </div>
+  const handleTitleCancel = () => {
+    setEditedTitle(productTitle)
+    setIsEditingTitle(false)
+  }
 
-            {productTitle && (
-              <div className="space-y-4 p-4 bg-muted rounded-md">
-                <h3 className="font-medium">Product Information</h3>
-                <p><strong>Title:</strong> {productTitle}</p>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="retail-price">Retail Price (€)</Label>
-                    <Input
-                      id="retail-price"
-                      type="number"
-                      step="0.01"
-                      value={productPrice?.toString() || ""}
-                      onChange={handleRetailPriceChange}
-                      placeholder="Enter retail price"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="purchase-price">
-                      Purchase Price (€)
-                      {isPurchasePriceFrozen && <span className="ml-2 text-sm text-green-600">(Frozen)</span>}
-                    </Label>
-                    <div className="flex space-x-2">
-                      <Input
-                        id="purchase-price"
-                        type="number"
-                        step="0.01"
-                        value={purchasePrice?.toString() || ""}
-                        onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || null)}
-                        placeholder="Enter purchase price"
-                        disabled={isPurchasePriceFrozen}
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={() => {
-                          if (purchasePrice) {
-                            setIsPurchasePriceFrozen(true)
-                            setMessage({ type: "success", text: "Purchase Price frozen successfully." })
-                          } else {
-                            setMessage({
-                              type: "error",
-                              text: "Please set a valid purchase price before freezing.",
-                            })
-                          }
-                        }}
-                        disabled={isPurchasePriceFrozen || !purchasePrice}
-                        className="whitespace-nowrap"
-                      >
-                        {isPurchasePriceFrozen ? "Frozen" : "Save"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="han">Manufacturer Article Number (HAN)</Label>
-              <Input
-                id="han"
-                value={han}
-                onChange={(e) => setHan(e.target.value)}
-                placeholder="Enter manufacturer article number"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Supplier</Label>
-              <Combobox
-                options={allSuppliers}
-                value={supplier}
-                onValueChange={setSupplier}
-                placeholder="Search and select supplier..."
-                emptyText="No matching suppliers found"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Button 
-                onClick={calculatePurchasePriceFactor}
-                disabled={!supplier || !productPrice || isPurchasePriceFrozen}
-                className="w-full"
-              >
-                Recalculate Purchase Price
-              </Button>
-            </div>
-
-            {(purchasePriceFactor !== null || purchasePrice !== null) && (
-              <div className="p-4 bg-muted rounded-md space-y-2">
-                {purchasePriceFactor !== null && !overridePurchasePrice && (
-                  <p><strong>Purchase Price Factor:</strong> {purchasePriceFactor.toFixed(2)}</p>
-                )}
-                {profitMargin !== null && (
-                  <div className="flex items-center space-x-2">
-                    <strong>Profit Margin:</strong>
-                    <span className={`font-medium ${
-                      profitMargin < 0 ? 'text-red-500' :
-                      profitMargin > 700 ? 'text-red-500' :
-                      profitMargin > 100 ? 'text-green-500' :
-                      'text-yellow-500'
-                    }`}>
-                      {profitMargin.toFixed(2)}%
-                    </span>
-                    {profitMargin > 700 && (
-                      <span className="text-red-500 text-sm">
-                        (Warning: Very high margin!)
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <Button
-              onClick={importArticle}
-              disabled={!productTitle || !han || !supplier || !purchasePrice || !productPrice || !isPurchasePriceFrozen}
-              className="w-full"
-            >
-              Import Article
-            </Button>
-
-            {message && (
-              <Alert variant={message.type === "success" ? "default" : "destructive"}>
-                <AlertDescription>{message.text}</AlertDescription>
-              </Alert>
-            )}
-
-            {csvPath && (
-              <div className="p-4 bg-muted rounded-md">
-                <p><strong>CSV File:</strong> {csvPath}</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <AlertDialog open={showExistsDialog} onOpenChange={setShowExistsDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>EAN Already Exists</AlertDialogTitle>
-            <AlertDialogDescription>
-              This EAN ({ean}) already exists in the database. Would you like to fetch the product information from Amazon anyway?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowExistsDialog(false)
-              resetForm()
-            }}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              setShowExistsDialog(false)
-              fetchProductFromAmazon()
-            }}>
-              Fetch from Amazon
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </main>
-  )
+  // ... (keep the rest of the JSX)
 }
