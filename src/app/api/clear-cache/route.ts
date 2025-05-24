@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { cache } from '../amazon-search/route'
+import { cache } from '@/lib/cache'
 
 export async function POST() {
   try {

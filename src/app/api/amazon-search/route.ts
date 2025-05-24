@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server'
-
-// Simple in-memory cache
-export const cache = new Map<string, { data: any; timestamp: number }>()
-const CACHE_DURATION = 1000 * 60 * 60 * 24 // 24 hours
+import { cache, CACHE_DURATION } from '@/lib/cache'
 
 interface AmazonSearchResponse {
   results: Array<{
@@ -18,6 +15,8 @@ interface AmazonSearchResponse {
     }
   }>
 }
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
   try {
@@ -45,7 +44,7 @@ export async function POST(req: Request) {
         domain: "de",
         query: ean,
         start_page: 1,
-        pages: 1, // Reduced from 2 to 1 for faster response
+        pages: 1,
         parse: true
       })
     })
@@ -96,13 +95,3 @@ export async function POST(req: Request) {
     }, { status: 500 })
   }
 }
-
-// Cache cleanup every hour
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, value] of cache.entries()) {
-    if (now - value.timestamp > CACHE_DURATION) {
-      cache.delete(key)
-    }
-  }
-}, 1000 * 60 * 60) // Every hour
