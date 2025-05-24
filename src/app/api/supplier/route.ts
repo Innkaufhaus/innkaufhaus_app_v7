@@ -13,18 +13,22 @@ export async function POST(req: Request) {
       }, { status: 400 })
     }
 
-    // Query to search suppliers by company name
+    // Query to search suppliers by company name, limited to top 5 matches
     const query = `
-      SELECT 
+      SELECT TOP 5
         kLieferant as id,
         cFirma as company,
         cAnsprechpartner as contact,
         cLieferantennummer as supplierNumber
       FROM tLieferant 
       WHERE cFirma LIKE '%${search}%'
-      ORDER BY cFirma
-      OFFSET 0 ROWS
-      FETCH NEXT 10 ROWS ONLY
+      ORDER BY 
+        CASE 
+          WHEN cFirma LIKE '${search}%' THEN 1  -- Exact start match
+          WHEN cFirma LIKE '% ${search}%' THEN 2  -- Word start match
+          ELSE 3  -- Contains match
+        END,
+        cFirma
     `
 
     const result = await executeQuery(
