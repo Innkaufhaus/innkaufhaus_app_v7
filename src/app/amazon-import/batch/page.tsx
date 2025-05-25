@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Combobox } from "@/components/ui/combobox"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useRouter } from "next/navigation"
 
 interface Product {
@@ -38,6 +39,8 @@ export default function BatchImportPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null)
   const [supplierOptions, setSupplierOptions] = useState<{ value: string; label: string }[]>([])
+  const [isSupplierFrozen, setIsSupplierFrozen] = useState(false)
+  const [frozenSupplier, setFrozenSupplier] = useState("")
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -110,7 +113,7 @@ export default function BatchImportPage() {
             price,
             purchasePrice: calculatePurchasePrice(price, "19"),
             taxRate: "19",
-            supplier: "",
+            supplier: frozenSupplier, // Use frozen supplier if set
             han: ean
           })
         }
@@ -128,9 +131,46 @@ export default function BatchImportPage() {
     }
   }
 
+  const handleSupplierChange = (value: string) => {
+    if (isSupplierFrozen) {
+      // Update all products with the new supplier
+      const updatedProducts = products.map(product => ({
+        ...product,
+        supplier: value
+      }))
+      setProducts(updatedProducts)
+      setFrozenSupplier(value)
+    }
+  }
+
+  const handleSupplierFreeze = (checked: boolean) => {
+    setIsSupplierFrozen(checked)
+    if (checked && products.length > 0) {
+      // When freezing, apply the first product's supplier to all
+      const firstSupplier = products[0].supplier
+      if (firstSupplier) {
+        const updatedProducts = products.map(product => ({
+          ...product,
+          supplier: firstSupplier
+        }))
+        setProducts(updatedProducts)
+        setFrozenSupplier(firstSupplier)
+      }
+    }
+  }
+
   const updateProduct = (index: number, field: keyof Product, value: string | number) => {
     const updatedProducts = [...products]
-    updatedProducts[index] = { ...updatedProducts[index], [field]: value }
+    
+    if (field === "supplier" && isSupplierFrozen) {
+      // If supplier is frozen, update all products
+      updatedProducts.forEach(product => {
+        product.supplier = value as string
+      })
+      setFrozenSupplier(value as string)
+    } else {
+      updatedProducts[index] = { ...updatedProducts[index], [field]: value }
+    }
 
     // Recalculate purchase price when retail price or tax rate changes
     if ((field === "price" || field === "taxRate") && typeof value !== "object") {
@@ -233,6 +273,27 @@ export default function BatchImportPage() {
 
             {products.length > 0 && (
               <div className="space-y-4">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox
+                    id="freeze-supplier"
+                    checked={isSupplierFrozen}
+                    onCheckedChange={handleSupplierFreeze}
+                  />
+                  <Label htmlFor="freeze-supplier">
+                    Use same supplier for all products
+                  </Label>
+                  {isSupplierFrozen && (
+                    <div className="ml-4 flex-1">
+                      <Combobox
+                        options={supplierOptions}
+                        value={frozenSupplier}
+                        onValueChange={handleSupplierChange}
+                        placeholder="Select supplier for all products"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
@@ -243,7 +304,7 @@ export default function BatchImportPage() {
                         <TableHead>Purchase Price (€)</TableHead>
                         <TableHead>Tax Rate</TableHead>
                         <TableHead>HAN</TableHead>
-                        <TableHead>Supplier</TableHead>
+                        {!isSupplierFrozen && <TableHead>Supplier</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -292,14 +353,16 @@ export default function BatchImportPage() {
                               onChange={(e) => updateProduct(index, "han", e.target.value)}
                             />
                           </TableCell>
-                          <TableCell>
-                            <Combobox
-                              options={supplierOptions}
-                              value={product.supplier}
-                              onValueChange={(value) => updateProduct(index, "supplier", value)}
-                              placeholder="Select supplier"
-                            />
-                          </TableCell>
+                          {!isSupplierFrozen && (
+                            <TableCell>
+                              <Combobox
+                                options={supplierOptions}
+                                value={product.supplier}
+                                onValueChange={(value) => updateProduct(index, "supplier", value)}
+                                placeholder="Select supplier"
+                              />
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
