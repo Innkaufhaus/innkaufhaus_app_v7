@@ -16,6 +16,7 @@ interface Product {
   ean: string
   title: string
   price: number
+  purchasePrice: number
   taxRate: "19" | "7"
   supplier: string
   han: string
@@ -57,18 +58,12 @@ export default function BatchImportPage() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              action: "list",
               connectionDetails: dbConfig
             }),
           })
           const supplierData = await supplierResponse.json()
           if (supplierData.success) {
-            setSupplierOptions(
-              supplierData.suppliers.map((s: string) => ({ 
-                value: s, 
-                label: s 
-              }))
-            )
+            setSupplierOptions(supplierData.suppliers)
           }
         }
       } catch (error) {
@@ -81,6 +76,12 @@ export default function BatchImportPage() {
     }
     loadSettings()
   }, [])
+
+  const calculatePurchasePrice = (retailPrice: number, taxRate: "19" | "7", factor: number = 1.5) => {
+    const taxMultiplier = taxRate === "19" ? 1.19 : 1.07
+    const nettoPrice = retailPrice / taxMultiplier
+    return parseFloat((nettoPrice / factor * 0.9).toFixed(2))
+  }
 
   const fetchProducts = async () => {
     const eanList = eans.split("\n").map(e => e.trim()).filter(e => e)
@@ -102,10 +103,12 @@ export default function BatchImportPage() {
         })
         const data = await response.json()
         if (data.success) {
+          const price = data.product.price
           newProducts.push({
             ean,
             title: data.product.title,
-            price: data.product.price,
+            price,
+            purchasePrice: calculatePurchasePrice(price, "19"),
             taxRate: "19",
             supplier: "",
             han: ean
@@ -128,6 +131,16 @@ export default function BatchImportPage() {
   const updateProduct = (index: number, field: keyof Product, value: string | number) => {
     const updatedProducts = [...products]
     updatedProducts[index] = { ...updatedProducts[index], [field]: value }
+
+    // Recalculate purchase price when retail price or tax rate changes
+    if ((field === "price" || field === "taxRate") && typeof value !== "object") {
+      const product = updatedProducts[index]
+      updatedProducts[index].purchasePrice = calculatePurchasePrice(
+        product.price,
+        product.taxRate as "19" | "7"
+      )
+    }
+
     setProducts(updatedProducts)
   }
 
@@ -146,7 +159,7 @@ export default function BatchImportPage() {
         const taxMultiplier = product.taxRate === "19" ? 1.19 : 1.07
         const nettoPrice = product.price / taxMultiplier
 
-        const response = await fetch("/api/article-import", {
+        const response = await fetch("/api/save-import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -155,7 +168,8 @@ export default function BatchImportPage() {
             han: product.han,
             bruttoPrice: product.price,
             nettoPrice,
-            supplier: product.supplier,
+            purchasePrice: product.purchasePrice,
+            supplier: supplierOptions.find(s => s.value === product.supplier)?.label || '',
             taxRate: product.taxRate,
             connectionDetails
           }),
@@ -226,6 +240,7 @@ export default function BatchImportPage() {
                         <TableHead>EAN</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Price (€)</TableHead>
+                        <TableHead>Purchase Price (€)</TableHead>
                         <TableHead>Tax Rate</TableHead>
                         <TableHead>HAN</TableHead>
                         <TableHead>Supplier</TableHead>
@@ -246,6 +261,14 @@ export default function BatchImportPage() {
                               type="number"
                               value={product.price}
                               onChange={(e) => updateProduct(index, "price", parseFloat(e.target.value))}
+                              step="0.01"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={product.purchasePrice}
+                              onChange={(e) => updateProduct(index, "purchasePrice", parseFloat(e.target.value))}
                               step="0.01"
                             />
                           </TableCell>
